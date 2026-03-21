@@ -18,9 +18,13 @@ module.exports = { supabase };
 
 // 3. NOW bring in the routes
 const postRoutes = require('./src/routes/postRoutes');
-app.use('/api/posts', postRoutes);
+const profileRoutes = require('./src/routes/profileRoutes');
 
-// 4. Test and Listen
+// 4. Use the routes
+app.use('/api/posts', postRoutes);
+app.use('/api/profiles', profileRoutes);
+
+// 5. Test and Listen
 const testConnection = async () => {
     const { data, error } = await supabase.from('profiles').select('*').limit(1);
     if (error) console.log('❌ Error:', error.message);
