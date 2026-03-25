@@ -19,10 +19,12 @@ module.exports = { supabase };
 // 3. NOW bring in the routes
 const postRoutes = require('./src/routes/postRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
+const authRoutes = require('./src/routes/authRoutes');
 
 // 4. Use the routes
 app.use('/api/posts', postRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/auth', authRoutes);
 
 // 5. Test and Listen
 const testConnection = async () => {
