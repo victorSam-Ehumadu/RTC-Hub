@@ -20,6 +20,7 @@ import '../features/profile/leaderboard_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../providers.dart';
+import 'env.dart';
 import 'supabase.dart';
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -40,7 +41,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/feed',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final signedIn = db.auth.currentSession != null;
+      // Env.demo first: in demo mode Supabase is never initialised, so
+      // reading db.auth here would throw.
+      final signedIn = Env.demo || db.auth.currentSession != null;
       final atAuth = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup';
 

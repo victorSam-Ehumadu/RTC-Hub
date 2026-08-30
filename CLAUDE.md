@@ -58,12 +58,20 @@ flutter analyze                                  # keep this at zero issues
 flutter test                                     # unit tests
 flutter test test/models_test.dart               # one file
 flutter build apk --debug --dart-define-from-file=env.json
+flutter run --dart-define=DEMO=true              # UI walkthrough, no backend
 ```
 
 Credentials come from `env.json` (gitignored; copy `env.example.json`) via
 `--dart-define-from-file`. `Env.isConfigured` is false without them and `main()`
 shows a setup screen rather than crashing — so a build that "works" but shows
 that screen means the define was missing, not that the code is broken.
+
+`--dart-define=DEMO=true` is the exception: it skips `Supabase.initialize`
+altogether and swaps the repository providers for the canned data in
+`lib/core/demo.dart`, so the app runs with no project and no keys. It exists to
+review layout and copy, and for a demo that survives dead campus wifi. It routes
+around RLS by construction, so never use it to show that an access rule works —
+that claim can only be demonstrated against a real project.
 
 Database changes are SQL files in `supabase/migrations/`, applied by pasting
 them into the Supabase SQL editor in filename order. There is no Supabase CLI
@@ -141,6 +149,30 @@ empty for a new user, which the web version never handled.
 `build_runner`. Keep it that way; adding codegen means a generation step in
 every workflow. PostgREST returns embedded aggregates as `[{"count": n}]`, which
 is what `embeddedCount` in `models/profile.dart` unpacks.
+
+## Staying in sync with the team
+
+Three people work this repo in parallel from three branches (see
+`WORKPLAN.md`), each driving Claude Code. Overlapping edits are the main risk,
+so treat syncing as part of the task, not as a chore at the end:
+
+- **Start every working session with `git fetch --all --prune` and a status
+  check** against the tracking branch, before reading or editing anything.
+  Reasoning about stale files is how two people rewrite the same widget.
+- **Pull before you edit shared files.** `pubspec.yaml`, `lib/providers.dart`,
+  `lib/core/router.dart` and `CLAUDE.md` are touched by all three streams;
+  WORKPLAN's rule is that edits to them are append-only for exactly this
+  reason.
+- **Push as soon as a unit of work is committed**, so the others see it. Small
+  scoped commits pushed often also satisfy the guidelines' requirement that
+  history show distributed contribution.
+- **Push to the feature branch, never straight to `main`.** `main` moves by
+  pull request.
+- If a pull conflicts, resolve it rather than reaching for `--force`. Never
+  force-push a shared branch without the branch owner saying so.
+- Migrations are numbered per stream (A→`0003`, B→`0004`, C→`0005`) so two
+  people never claim the same filename. Check `supabase/migrations/` after a
+  fetch before naming a new one.
 
 ## Conventions
 

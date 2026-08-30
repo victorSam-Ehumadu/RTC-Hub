@@ -51,6 +51,19 @@ flutter run --dart-define-from-file=env.json
 
 Launching without the credentials shows a setup screen instead of crashing.
 
+**Just want to look at the UI?** Skip steps 1 and 2 entirely:
+
+```bash
+flutter run --dart-define=DEMO=true
+```
+
+Demo mode never initialises Supabase. It runs the whole app against the sample
+data in `lib/core/demo.dart` — signed in as a third-year student, with a
+populated feed, open bounties, chats and listings — so you can review layout and
+copy with no project and no keys. Changes you make live in memory and vanish on
+restart. Because it bypasses row-level security by construction, never use it to
+demonstrate that a permission rule works.
+
 **4. Make yourself an admin.** Sign up in the app, then in the SQL editor:
 
 ```sql
@@ -65,6 +78,7 @@ rejects it.
 
 ```bash
 flutter run --dart-define-from-file=env.json     # debug on a connected device
+flutter run --dart-define=DEMO=true              # UI only, no Supabase needed
 flutter analyze                                  # static analysis
 flutter test                                     # unit tests
 flutter build apk --release --dart-define-from-file=env.json

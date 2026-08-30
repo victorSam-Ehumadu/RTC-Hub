@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import 'core/demo.dart';
 import 'core/env.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
@@ -11,6 +12,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   timeago.setLocaleMessages('en_short', timeago.EnShortMessages());
+
+  // Demo mode never contacts Supabase, so it must short-circuit before both
+  // the credential check and Supabase.initialize.
+  if (Env.demo) {
+    runApp(ProviderScope(overrides: demoOverrides, child: const RtcHubApp()));
+    return;
+  }
 
   // Without credentials there is nothing to connect to, so show setup
   // instructions rather than crashing inside Supabase.initialize.

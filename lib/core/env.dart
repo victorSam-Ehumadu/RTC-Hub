@@ -11,4 +11,12 @@ class Env {
 
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+
+  /// Offline UI walkthrough: `--dart-define=DEMO=true`.
+  ///
+  /// Runs the whole app against the canned data in `core/demo.dart` without
+  /// initialising Supabase at all, so no project and no keys are needed. It
+  /// bypasses row-level security by construction — never use it to show that
+  /// an access rule works.
+  static const demo = bool.fromEnvironment('DEMO');
 }
