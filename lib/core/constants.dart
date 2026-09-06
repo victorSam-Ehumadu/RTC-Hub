@@ -9,10 +9,10 @@ class Faculty {
 
 const kFaculties = <Faculty>[
   Faculty('IT', 'Information Technology', [
-    'BSc IT (Bachelor of Science in Information Technology)',
-    'DIT (Diploma in Information Technology)',
-    'HCIT (Higher Certificate in Information Technology)',
-    'HCCF (Higher Certificate in Computer Forensics)',
+    'BSc Information Technology',
+    'Diploma in Information Technology',
+    'Higher Certificate in Information Technology',
+    'Higher Certificate in Computer Forensics',
   ]),
   Faculty('BUSINESS', 'Business and Management Sciences', [
     'BCom (Bachelor of Commerce)',

@@ -310,9 +310,9 @@ class _CommentTile extends StatelessWidget {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 36),
-                  foregroundColor: AppColors.accent,
+                  foregroundColor: AppColors.button,
                   side: BorderSide(
-                      color: AppColors.accent.withValues(alpha: 0.5)),
+                      color: AppColors.button.withValues(alpha: 0.5)),
                 ),
                 onPressed: onAccept,
                 icon: const Icon(Icons.check_circle_outline, size: 16),
@@ -370,13 +370,13 @@ class _ReplyBar extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             IconButton.filled(
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.button,
+                foregroundColor: Colors.white,
+              ),
               onPressed: sending ? null : onSend,
               icon: sending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const DottedProgressIndicator(size: 16, color: Colors.white)
                   : const Icon(Icons.send, size: 18),
             ),
           ],

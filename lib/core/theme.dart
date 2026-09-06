@@ -11,6 +11,7 @@ class AppColors {
   static const accentDim = Color(0xFF15803D);
   static const points = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
+  static const button = Color(0xFF0C499D);
 
   static const darkBg = Color(0xFF030712);
   static const darkSurface = Color(0xFF111827);
@@ -121,6 +122,8 @@ ThemeData _build({required bool dark}) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        backgroundColor: AppColors.button,
+        foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(50),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -129,12 +132,32 @@ ThemeData _build({required bool dark}) {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.button,
         minimumSize: const Size.fromHeight(50),
         side: BorderSide(color: border),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15),
       ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.button,
+        textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: AppColors.button,
+        selectedForegroundColor: Colors.white,
+      ),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: AppColors.button,
+      foregroundColor: Colors.white,
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.button,
     ),
     chipTheme: ChipThemeData(
       backgroundColor: surface,
@@ -144,7 +167,7 @@ ThemeData _build({required bool dark}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surface,
-      indicatorColor: AppColors.accent.withValues(alpha: 0.18),
+      indicatorColor: AppColors.button.withValues(alpha: 0.18),
       surfaceTintColor: Colors.transparent,
       labelTextStyle: WidgetStatePropertyAll(
         GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),

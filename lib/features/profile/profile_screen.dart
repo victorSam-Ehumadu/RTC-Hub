@@ -207,6 +207,7 @@ class _CompletenessBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: profile.profileCompleteness / 100,
               minHeight: 6,
+              color: AppColors.accent,
               backgroundColor:
                   Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
             ),

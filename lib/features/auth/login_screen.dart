@@ -99,10 +99,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     FilledButton(
                       onPressed: _busy ? null : _submit,
                       child: _busy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? const DottedProgressIndicator(
+                              size: 20,
+                              color: Colors.white,
                             )
                           : const Text('Sign in'),
                     ),

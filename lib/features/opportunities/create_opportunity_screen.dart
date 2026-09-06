@@ -79,11 +79,7 @@ class _CreateOpportunityScreenState
           TextButton(
             onPressed: _busy ? null : _submit,
             child: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const DottedProgressIndicator(size: 16)
                 : const Text('Submit'),
           ),
           const SizedBox(width: 8),
