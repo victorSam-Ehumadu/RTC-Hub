@@ -623,6 +623,28 @@ final demoStudentStats = StudentStats(
     for (var i = 29; i >= 0; i--)
       DailyMetric(date: _daysAgo(i), value: (i * 3) % 5),
   ],
+  myCompleteness: 72,
+  programmeAvgCompleteness: 61,
+  programmePeerCount: 24,
+);
+
+const demoSkillSignals = PlatformSkillSignals(
+  wantedByBusinesses: [
+    SkillCount(skill: 'Flutter', count: 11),
+    SkillCount(skill: 'SQL', count: 9),
+    SkillCount(skill: 'Python', count: 8),
+    SkillCount(skill: 'React', count: 6),
+    SkillCount(skill: 'Java', count: 5),
+    SkillCount(skill: 'UI/UX Design', count: 4),
+  ],
+  mostSearched: [
+    SkillCount(skill: 'Python', count: 34),
+    SkillCount(skill: 'Flutter', count: 22),
+    SkillCount(skill: 'Git', count: 18),
+    SkillCount(skill: 'SQL', count: 15),
+    SkillCount(skill: 'JavaScript', count: 12),
+    SkillCount(skill: 'Figma', count: 7),
+  ],
 );
 
 const demoAdminStats = AdminStats(
@@ -1294,6 +1316,9 @@ class DemoAnalyticsRepository extends AnalyticsRepository {
 
   @override
   Future<StudentStats> forStudent(String userId) async => demoStudentStats;
+
+  @override
+  Future<PlatformSkillSignals> skillSignals() async => demoSkillSignals;
 }
 
 class DemoStorageRepository extends StorageRepository {
