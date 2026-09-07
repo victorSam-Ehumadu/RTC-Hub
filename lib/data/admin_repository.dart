@@ -144,6 +144,7 @@ class AnalyticsRepository {
           .eq('user_id', userId)
           .order('date', ascending: false)
           .limit(30),
+      db.from('profiles').select('course, profile_completeness').eq('id', userId).maybeSingle(),
     ]);
 
     final daily = (results[4] as List).cast<Map<String, dynamic>>();
@@ -159,6 +160,19 @@ class AnalyticsRepository {
             ))
         .toList();
 
+    final me = results[5] as Map<String, dynamic>?;
+    final course = me?['course'] as String?;
+    final myCompleteness = (me?['profile_completeness'] as num?)?.toInt() ?? 0;
+
+    double programmeAvg = 0;
+    int programmePeers = 0;
+    if (course != null && course.isNotEmpty) {
+      final row = await db.rpc('programme_completeness', params: {'p_course': course});
+      final peers = (row as List).isNotEmpty ? row.first as Map<String, dynamic> : null;
+      programmeAvg = (peers?['avg_completeness'] as num?)?.toDouble() ?? 0;
+      programmePeers = (peers?['peer_count'] as num?)?.toInt() ?? 0;
+    }
+
     return StudentStats(
       logicPoints: (results[0] as num?)?.toInt() ?? 0,
       posts: (results[1] as List).length,
@@ -170,6 +184,35 @@ class AnalyticsRepository {
       viewsByDay: seriesOf('profile_views'),
       connectionsByDay: seriesOf('new_connections'),
       engagementByDay: seriesOf('post_reactions'),
+      myCompleteness: myCompleteness,
+      programmeAvgCompleteness: programmeAvg,
+      programmePeerCount: programmePeers,
+    );
+  }
+
+  /// Platform-wide skill signals for the student dashboard — not
+  /// user-specific, so this is a separate call from [forStudent].
+  Future<PlatformSkillSignals> skillSignals() async {
+    final results = await Future.wait<dynamic>([
+      db.rpc('top_wanted_skills', params: {'p_limit': 8}),
+      db
+          .from('skill_search_counts')
+          .select('skill_name, search_count')
+          .order('search_count', ascending: false)
+          .limit(8),
+    ]);
+
+    List<SkillCount> parse(List<dynamic> rows, String nameKey, String countKey) => rows
+        .cast<Map<String, dynamic>>()
+        .map((row) => SkillCount(
+              skill: row[nameKey] as String,
+              count: (row[countKey] as num).toInt(),
+            ))
+        .toList();
+
+    return PlatformSkillSignals(
+      wantedByBusinesses: parse(results[0] as List, 'skill', 'listings'),
+      mostSearched: parse(results[1] as List, 'skill_name', 'search_count'),
     );
   }
 }
@@ -186,6 +229,9 @@ class StudentStats {
     required this.viewsByDay,
     required this.connectionsByDay,
     required this.engagementByDay,
+    required this.myCompleteness,
+    required this.programmeAvgCompleteness,
+    required this.programmePeerCount,
   });
 
   final int logicPoints;
@@ -203,6 +249,15 @@ class StudentStats {
   final List<DailyMetric> viewsByDay;
   final List<DailyMetric> connectionsByDay;
   final List<DailyMetric> engagementByDay;
+
+  /// Profile completeness (0-100) versus other STUDENT profiles sharing
+  /// [Profile.course] — see `programme_completeness()` (migration 0007).
+  /// [programmePeerCount] is 0 when the student has no course set, or has
+  /// no visible classmates yet; the dashboard should fall back to just
+  /// showing [myCompleteness] in that case.
+  final int myCompleteness;
+  final double programmeAvgCompleteness;
+  final int programmePeerCount;
 }
 
 /// One point in a 30-day daily series — profile views, new connections, or
@@ -212,4 +267,24 @@ class DailyMetric {
 
   final DateTime date;
   final int value;
+}
+
+/// Platform-wide skill demand, for the student dashboard's two skill
+/// charts — what businesses ask for in listings, and what people actually
+/// type into the people-search box. See migration 0007.
+class PlatformSkillSignals {
+  const PlatformSkillSignals({
+    required this.wantedByBusinesses,
+    required this.mostSearched,
+  });
+
+  final List<SkillCount> wantedByBusinesses;
+  final List<SkillCount> mostSearched;
+}
+
+class SkillCount {
+  const SkillCount({required this.skill, required this.count});
+
+  final String skill;
+  final int count;
 }
