@@ -476,13 +476,24 @@ class _StatsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(studentStatsProvider(userId));
 
+    final me = ref.watch(meProvider);
+    final showDashboardLink = (me?.isStudent ?? false) || (me?.isAlumni ?? false);
+
     return stats.when(
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (s) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Your numbers'),
+          SectionHeader(
+            title: 'Your numbers',
+            action: showDashboardLink
+                ? TextButton(
+                    onPressed: () => context.push('/dashboard'),
+                    child: const Text('Full dashboard'),
+                  )
+                : null,
+          ),
           Row(
             children: [
               _Stat(label: 'Views', value: '${s.profileViews}'),
