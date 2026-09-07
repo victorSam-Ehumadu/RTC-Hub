@@ -12,6 +12,7 @@ class AppColors {
   static const points = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
   static const button = Color(0xFF0C499D);
+  static const navSelected = Color(0xFFDE473C);
 
   static const darkBg = Color(0xFF030712);
   static const darkSurface = Color(0xFF111827);
@@ -167,10 +168,27 @@ ThemeData _build({required bool dark}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surface,
-      indicatorColor: AppColors.button.withValues(alpha: 0.18),
+      indicatorColor: AppColors.navSelected.withValues(alpha: 0.18),
       surfaceTintColor: Colors.transparent,
-      labelTextStyle: WidgetStatePropertyAll(
-        GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+      // Flutter's own default for the selected icon/label is
+      // ColorScheme.onSecondaryContainer, which our scheme never sets — it
+      // was falling back to near-black and vanishing against the dark
+      // theme. Spell both states out explicitly instead.
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? AppColors.navSelected
+              : muted,
+        ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: states.contains(WidgetState.selected)
+              ? AppColors.navSelected
+              : muted,
+        ),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
