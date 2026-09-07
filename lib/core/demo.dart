@@ -609,9 +609,19 @@ final demoStudentStats = StudentStats(
   skills: 5,
   connections: 3,
   profileViews: 128,
+  newConnections: 3,
+  postReactions: 41,
   viewsByDay: [
     for (var i = 29; i >= 0; i--)
-      DailyViews(date: _daysAgo(i), views: 2 + ((i * 7) % 9)),
+      DailyMetric(date: _daysAgo(i), value: 2 + ((i * 7) % 9)),
+  ],
+  connectionsByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: i % 6 == 0 ? 1 : 0),
+  ],
+  engagementByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: (i * 3) % 5),
   ],
 );
 

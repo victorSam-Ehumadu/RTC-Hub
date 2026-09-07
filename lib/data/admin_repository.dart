@@ -140,29 +140,36 @@ class AnalyticsRepository {
           .or('sender_id.eq.$userId,receiver_id.eq.$userId'),
       db
           .from('profile_analytics')
-          .select()
+          .select('date, profile_views, new_connections, post_reactions')
           .eq('user_id', userId)
           .order('date', ascending: false)
           .limit(30),
     ]);
 
     final daily = (results[4] as List).cast<Map<String, dynamic>>();
+    int sumOf(String column) => daily.fold<int>(
+          0,
+          (sum, row) => sum + ((row[column] as int?) ?? 0),
+        );
+    List<DailyMetric> seriesOf(String column) => daily.reversed
+        .map((row) => DailyMetric(
+              date: DateTime.tryParse((row['date'] ?? '') as String) ??
+                  DateTime.now(),
+              value: (row[column] as int?) ?? 0,
+            ))
+        .toList();
+
     return StudentStats(
       logicPoints: (results[0] as num?)?.toInt() ?? 0,
       posts: (results[1] as List).length,
       skills: (results[2] as List).length,
       connections: (results[3] as List).length,
-      profileViews: daily.fold<int>(
-        0,
-        (sum, row) => sum + ((row['profile_views'] as int?) ?? 0),
-      ),
-      viewsByDay: daily.reversed
-          .map((row) => DailyViews(
-                date: DateTime.tryParse((row['date'] ?? '') as String) ??
-                    DateTime.now(),
-                views: (row['profile_views'] as int?) ?? 0,
-              ))
-          .toList(),
+      profileViews: sumOf('profile_views'),
+      newConnections: sumOf('new_connections'),
+      postReactions: sumOf('post_reactions'),
+      viewsByDay: seriesOf('profile_views'),
+      connectionsByDay: seriesOf('new_connections'),
+      engagementByDay: seriesOf('post_reactions'),
     );
   }
 }
@@ -174,7 +181,11 @@ class StudentStats {
     required this.skills,
     required this.connections,
     required this.profileViews,
+    required this.newConnections,
+    required this.postReactions,
     required this.viewsByDay,
+    required this.connectionsByDay,
+    required this.engagementByDay,
   });
 
   final int logicPoints;
@@ -182,12 +193,23 @@ class StudentStats {
   final int skills;
   final int connections;
   final int profileViews;
-  final List<DailyViews> viewsByDay;
+
+  /// Last 30 days — new ACCEPTED connections and reactions received,
+  /// summed from [connectionsByDay]/[engagementByDay]. Distinct from
+  /// [connections], which is the all-time total.
+  final int newConnections;
+  final int postReactions;
+
+  final List<DailyMetric> viewsByDay;
+  final List<DailyMetric> connectionsByDay;
+  final List<DailyMetric> engagementByDay;
 }
 
-class DailyViews {
-  const DailyViews({required this.date, required this.views});
+/// One point in a 30-day daily series — profile views, new connections, or
+/// post engagement, depending on which [StudentStats] field it came from.
+class DailyMetric {
+  const DailyMetric({required this.date, required this.value});
 
   final DateTime date;
-  final int views;
+  final int value;
 }
