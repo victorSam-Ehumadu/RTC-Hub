@@ -626,26 +626,21 @@ final demoStudentStats = StudentStats(
   myCompleteness: 72,
   programmeAvgCompleteness: 61,
   programmePeerCount: 24,
+  mySearchedSkills: [
+    SkillCount(skill: 'Flutter', count: 6),
+    SkillCount(skill: 'SQL', count: 4),
+    SkillCount(skill: 'Python', count: 2),
+  ],
 );
 
-const demoSkillSignals = PlatformSkillSignals(
-  wantedByBusinesses: [
-    SkillCount(skill: 'Flutter', count: 11),
-    SkillCount(skill: 'SQL', count: 9),
-    SkillCount(skill: 'Python', count: 8),
-    SkillCount(skill: 'React', count: 6),
-    SkillCount(skill: 'Java', count: 5),
-    SkillCount(skill: 'UI/UX Design', count: 4),
-  ],
-  mostSearched: [
-    SkillCount(skill: 'Python', count: 34),
-    SkillCount(skill: 'Flutter', count: 22),
-    SkillCount(skill: 'Git', count: 18),
-    SkillCount(skill: 'SQL', count: 15),
-    SkillCount(skill: 'JavaScript', count: 12),
-    SkillCount(skill: 'Figma', count: 7),
-  ],
-);
+const demoWantedSkills = [
+  SkillCount(skill: 'Flutter', count: 11),
+  SkillCount(skill: 'SQL', count: 9),
+  SkillCount(skill: 'Python', count: 8),
+  SkillCount(skill: 'React', count: 6),
+  SkillCount(skill: 'Java', count: 5),
+  SkillCount(skill: 'UI/UX Design', count: 4),
+];
 
 const demoAdminStats = AdminStats(
   totalUsers: 486,
@@ -1318,7 +1313,7 @@ class DemoAnalyticsRepository extends AnalyticsRepository {
   Future<StudentStats> forStudent(String userId) async => demoStudentStats;
 
   @override
-  Future<PlatformSkillSignals> skillSignals() async => demoSkillSignals;
+  Future<List<SkillCount>> wantedSkills() async => demoWantedSkills;
 }
 
 class DemoStorageRepository extends StorageRepository {

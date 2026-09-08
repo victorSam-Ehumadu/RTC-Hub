@@ -45,7 +45,7 @@ class _Body extends ConsumerWidget {
       data: (s) => RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(studentStatsProvider(userId));
-          ref.invalidate(skillSignalsProvider);
+          ref.invalidate(wantedSkillsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
@@ -77,7 +77,18 @@ class _Body extends ConsumerWidget {
               avg: s.programmeAvgCompleteness,
               peers: s.programmePeerCount,
             ),
-            const _SkillSignalsSection(),
+            // §2.7, literally: "which of their skills are most searched for
+            // by business users" — already scoped to this student and to
+            // business-role searches by my_searched_skills() (migration
+            // 0008), so no separate loading state is needed here.
+            const SectionHeader(title: 'Your skills, most searched by businesses'),
+            _SkillBars(
+              items: s.mySearchedSkills,
+              color: AppColors.points,
+              emptyText: 'None of your skills have been searched by a '
+                  'business yet.',
+            ),
+            const _WantedSkillsSection(),
           ],
         ),
       ),
@@ -85,14 +96,17 @@ class _Body extends ConsumerWidget {
   }
 }
 
-class _SkillSignalsSection extends ConsumerWidget {
-  const _SkillSignalsSection();
+/// Bonus context beyond §2.7's literal text (see [StudentStats.mySearchedSkills]
+/// for the mandatory metric): what businesses ask for platform-wide, so a
+/// student can see what's in demand generally, not just for their own skills.
+class _WantedSkillsSection extends ConsumerWidget {
+  const _WantedSkillsSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final signals = ref.watch(skillSignalsProvider);
+    final wanted = ref.watch(wantedSkillsProvider);
 
-    return signals.when(
+    return wanted.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: DottedProgressIndicator()),
@@ -101,21 +115,15 @@ class _SkillSignalsSection extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(describeError(err)),
       ),
-      data: (signals) => Column(
+      data: (items) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(title: 'Skills businesses want'),
           _SkillBars(
-            items: signals.wantedByBusinesses,
+            items: items,
             color: AppColors.button,
             emptyText: 'No active listings yet — check back once businesses '
                 'start posting opportunities.',
-          ),
-          const SectionHeader(title: 'Most-searched skills'),
-          _SkillBars(
-            items: signals.mostSearched,
-            color: AppColors.points,
-            emptyText: 'Nobody has searched for a catalog skill yet.',
           ),
         ],
       ),

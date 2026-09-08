@@ -145,6 +145,7 @@ class AnalyticsRepository {
           .order('date', ascending: false)
           .limit(30),
       db.from('profiles').select('course, profile_completeness').eq('id', userId).maybeSingle(),
+      db.rpc('my_searched_skills', params: {'p_limit': 8}),
     ]);
 
     final daily = (results[4] as List).cast<Map<String, dynamic>>();
@@ -173,6 +174,19 @@ class AnalyticsRepository {
       programmePeers = (peers?['peer_count'] as num?)?.toInt() ?? 0;
     }
 
+    List<SkillCount> parseSkillCounts(
+      List<dynamic> rows,
+      String nameKey,
+      String countKey,
+    ) =>
+        rows
+            .cast<Map<String, dynamic>>()
+            .map((row) => SkillCount(
+                  skill: row[nameKey] as String,
+                  count: (row[countKey] as num).toInt(),
+                ))
+            .toList();
+
     return StudentStats(
       logicPoints: (results[0] as num?)?.toInt() ?? 0,
       posts: (results[1] as List).length,
@@ -187,33 +201,25 @@ class AnalyticsRepository {
       myCompleteness: myCompleteness,
       programmeAvgCompleteness: programmeAvg,
       programmePeerCount: programmePeers,
+      mySearchedSkills:
+          parseSkillCounts(results[6] as List, 'skill_name', 'search_count'),
     );
   }
 
-  /// Platform-wide skill signals for the student dashboard — not
-  /// user-specific, so this is a separate call from [forStudent].
-  Future<PlatformSkillSignals> skillSignals() async {
-    final results = await Future.wait<dynamic>([
-      db.rpc('top_wanted_skills', params: {'p_limit': 8}),
-      db
-          .from('skill_search_counts')
-          .select('skill_name, search_count')
-          .order('search_count', ascending: false)
-          .limit(8),
-    ]);
-
-    List<SkillCount> parse(List<dynamic> rows, String nameKey, String countKey) => rows
+  /// Platform-wide — not user-specific, so this is a separate call from
+  /// [forStudent]. A bonus signal beyond §2.7's literal text (which only
+  /// asks for a student's own skills as searched by business users, now
+  /// [StudentStats.mySearchedSkills]): what businesses ask for across
+  /// active listings, for context on what's in demand generally.
+  Future<List<SkillCount>> wantedSkills() async {
+    final rows = await db.rpc('top_wanted_skills', params: {'p_limit': 8});
+    return (rows as List)
         .cast<Map<String, dynamic>>()
         .map((row) => SkillCount(
-              skill: row[nameKey] as String,
-              count: (row[countKey] as num).toInt(),
+              skill: row['skill'] as String,
+              count: (row['listings'] as num).toInt(),
             ))
         .toList();
-
-    return PlatformSkillSignals(
-      wantedByBusinesses: parse(results[0] as List, 'skill', 'listings'),
-      mostSearched: parse(results[1] as List, 'skill_name', 'search_count'),
-    );
   }
 }
 
@@ -232,6 +238,7 @@ class StudentStats {
     required this.myCompleteness,
     required this.programmeAvgCompleteness,
     required this.programmePeerCount,
+    required this.mySearchedSkills,
   });
 
   final int logicPoints;
@@ -258,6 +265,13 @@ class StudentStats {
   final int myCompleteness;
   final double programmeAvgCompleteness;
   final int programmePeerCount;
+
+  /// §2.7, literally: "which of their skills are most searched for by
+  /// business users" — the caller's own skills only, ranked by how often a
+  /// BUSINESS-role search matched them. See `my_searched_skills()`
+  /// (migration 0008), which corrected this from an earlier, wrongly
+  /// platform-wide version.
+  final List<SkillCount> mySearchedSkills;
 }
 
 /// One point in a 30-day daily series — profile views, new connections, or
@@ -267,19 +281,6 @@ class DailyMetric {
 
   final DateTime date;
   final int value;
-}
-
-/// Platform-wide skill demand, for the student dashboard's two skill
-/// charts — what businesses ask for in listings, and what people actually
-/// type into the people-search box. See migration 0007.
-class PlatformSkillSignals {
-  const PlatformSkillSignals({
-    required this.wantedByBusinesses,
-    required this.mostSearched,
-  });
-
-  final List<SkillCount> wantedByBusinesses;
-  final List<SkillCount> mostSearched;
 }
 
 class SkillCount {

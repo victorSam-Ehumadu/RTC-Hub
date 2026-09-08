@@ -270,7 +270,6 @@ final studentStatsProvider =
 });
 
 /// Platform-wide, not per-user — no `.family` needed.
-final skillSignalsProvider =
-    FutureProvider.autoDispose<PlatformSkillSignals>((ref) {
-  return ref.watch(analyticsRepoProvider).skillSignals();
+final wantedSkillsProvider = FutureProvider.autoDispose<List<SkillCount>>((ref) {
+  return ref.watch(analyticsRepoProvider).wantedSkills();
 });
