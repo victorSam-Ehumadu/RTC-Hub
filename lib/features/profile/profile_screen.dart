@@ -51,6 +51,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onPressed: () => context.push('/admin'),
                 icon: const Icon(Icons.admin_panel_settings_outlined),
               ),
+            if ((me?.isStudent ?? false) || (me?.isAlumni ?? false))
+              IconButton(
+                tooltip: 'Dashboard',
+                onPressed: () => context.push('/dashboard'),
+                icon: const Icon(Icons.trending_up),
+              ),
             IconButton(
               tooltip: 'Edit',
               onPressed: () => context.push('/edit-profile'),

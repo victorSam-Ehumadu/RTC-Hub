@@ -168,7 +168,7 @@ ThemeData _build({required bool dark}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surface,
-      indicatorColor: AppColors.navSelected.withValues(alpha: 0.18),
+      indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       // Flutter's own default for the selected icon/label is
       // ColorScheme.onSecondaryContainer, which our scheme never sets — it

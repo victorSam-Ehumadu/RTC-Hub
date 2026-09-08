@@ -17,7 +17,13 @@ John Rod
 202512345@my.richfield.ac.za
 TestPass1234
 
+  update auth.users
+  set encrypted_password = extensions.crypt('TestPass1234', extensions.gen_salt('bf'))
+  where email = '202512345@my.richfield.ac.za';
 
+  update auth.users
+  set email_confirmed_at = now()
+  where email = '<the-email>@my.richfield.ac.za';
 
 201302403@my.richfield.ac.za
 TestTest
