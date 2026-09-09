@@ -140,30 +140,86 @@ class AnalyticsRepository {
           .or('sender_id.eq.$userId,receiver_id.eq.$userId'),
       db
           .from('profile_analytics')
-          .select()
+          .select('date, profile_views, new_connections, post_reactions')
           .eq('user_id', userId)
           .order('date', ascending: false)
           .limit(30),
+      db.from('profiles').select('course, profile_completeness').eq('id', userId).maybeSingle(),
+      db.rpc('my_searched_skills', params: {'p_limit': 8}),
     ]);
 
     final daily = (results[4] as List).cast<Map<String, dynamic>>();
+    int sumOf(String column) => daily.fold<int>(
+          0,
+          (sum, row) => sum + ((row[column] as int?) ?? 0),
+        );
+    List<DailyMetric> seriesOf(String column) => daily.reversed
+        .map((row) => DailyMetric(
+              date: DateTime.tryParse((row['date'] ?? '') as String) ??
+                  DateTime.now(),
+              value: (row[column] as int?) ?? 0,
+            ))
+        .toList();
+
+    final me = results[5] as Map<String, dynamic>?;
+    final course = me?['course'] as String?;
+    final myCompleteness = (me?['profile_completeness'] as num?)?.toInt() ?? 0;
+
+    double programmeAvg = 0;
+    int programmePeers = 0;
+    if (course != null && course.isNotEmpty) {
+      final row = await db.rpc('programme_completeness', params: {'p_course': course});
+      final peers = (row as List).isNotEmpty ? row.first as Map<String, dynamic> : null;
+      programmeAvg = (peers?['avg_completeness'] as num?)?.toDouble() ?? 0;
+      programmePeers = (peers?['peer_count'] as num?)?.toInt() ?? 0;
+    }
+
+    List<SkillCount> parseSkillCounts(
+      List<dynamic> rows,
+      String nameKey,
+      String countKey,
+    ) =>
+        rows
+            .cast<Map<String, dynamic>>()
+            .map((row) => SkillCount(
+                  skill: row[nameKey] as String,
+                  count: (row[countKey] as num).toInt(),
+                ))
+            .toList();
+
     return StudentStats(
       logicPoints: (results[0] as num?)?.toInt() ?? 0,
       posts: (results[1] as List).length,
       skills: (results[2] as List).length,
       connections: (results[3] as List).length,
-      profileViews: daily.fold<int>(
-        0,
-        (sum, row) => sum + ((row['profile_views'] as int?) ?? 0),
-      ),
-      viewsByDay: daily.reversed
-          .map((row) => DailyViews(
-                date: DateTime.tryParse((row['date'] ?? '') as String) ??
-                    DateTime.now(),
-                views: (row['profile_views'] as int?) ?? 0,
-              ))
-          .toList(),
+      profileViews: sumOf('profile_views'),
+      newConnections: sumOf('new_connections'),
+      postReactions: sumOf('post_reactions'),
+      viewsByDay: seriesOf('profile_views'),
+      connectionsByDay: seriesOf('new_connections'),
+      engagementByDay: seriesOf('post_reactions'),
+      myCompleteness: myCompleteness,
+      programmeAvgCompleteness: programmeAvg,
+      programmePeerCount: programmePeers,
+      mySearchedSkills:
+          parseSkillCounts(results[6] as List, 'skill_name', 'search_count'),
     );
+  }
+
+  /// Platform-wide — not user-specific, so this is a separate call from
+  /// [forStudent]. A bonus signal beyond §2.7's literal text (which only
+  /// asks for a student's own skills as searched by business users, now
+  /// [StudentStats.mySearchedSkills]): what businesses ask for across
+  /// active listings, for context on what's in demand generally.
+  Future<List<SkillCount>> wantedSkills() async {
+    final rows = await db.rpc('top_wanted_skills', params: {'p_limit': 8});
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => SkillCount(
+              skill: row['skill'] as String,
+              count: (row['listings'] as num).toInt(),
+            ))
+        .toList();
   }
 }
 
@@ -174,7 +230,15 @@ class StudentStats {
     required this.skills,
     required this.connections,
     required this.profileViews,
+    required this.newConnections,
+    required this.postReactions,
     required this.viewsByDay,
+    required this.connectionsByDay,
+    required this.engagementByDay,
+    required this.myCompleteness,
+    required this.programmeAvgCompleteness,
+    required this.programmePeerCount,
+    required this.mySearchedSkills,
   });
 
   final int logicPoints;
@@ -182,12 +246,46 @@ class StudentStats {
   final int skills;
   final int connections;
   final int profileViews;
-  final List<DailyViews> viewsByDay;
+
+  /// Last 30 days — new ACCEPTED connections and reactions received,
+  /// summed from [connectionsByDay]/[engagementByDay]. Distinct from
+  /// [connections], which is the all-time total.
+  final int newConnections;
+  final int postReactions;
+
+  final List<DailyMetric> viewsByDay;
+  final List<DailyMetric> connectionsByDay;
+  final List<DailyMetric> engagementByDay;
+
+  /// Profile completeness (0-100) versus other STUDENT profiles sharing
+  /// [Profile.course] — see `programme_completeness()` (migration 0007).
+  /// [programmePeerCount] is 0 when the student has no course set, or has
+  /// no visible classmates yet; the dashboard should fall back to just
+  /// showing [myCompleteness] in that case.
+  final int myCompleteness;
+  final double programmeAvgCompleteness;
+  final int programmePeerCount;
+
+  /// §2.7, literally: "which of their skills are most searched for by
+  /// business users" — the caller's own skills only, ranked by how often a
+  /// BUSINESS-role search matched them. See `my_searched_skills()`
+  /// (migration 0008), which corrected this from an earlier, wrongly
+  /// platform-wide version.
+  final List<SkillCount> mySearchedSkills;
 }
 
-class DailyViews {
-  const DailyViews({required this.date, required this.views});
+/// One point in a 30-day daily series — profile views, new connections, or
+/// post engagement, depending on which [StudentStats] field it came from.
+class DailyMetric {
+  const DailyMetric({required this.date, required this.value});
 
   final DateTime date;
-  final int views;
+  final int value;
+}
+
+class SkillCount {
+  const SkillCount({required this.skill, required this.count});
+
+  final String skill;
+  final int count;
 }

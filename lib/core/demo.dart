@@ -609,11 +609,38 @@ final demoStudentStats = StudentStats(
   skills: 5,
   connections: 3,
   profileViews: 128,
+  newConnections: 3,
+  postReactions: 41,
   viewsByDay: [
     for (var i = 29; i >= 0; i--)
-      DailyViews(date: _daysAgo(i), views: 2 + ((i * 7) % 9)),
+      DailyMetric(date: _daysAgo(i), value: 2 + ((i * 7) % 9)),
+  ],
+  connectionsByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: i % 6 == 0 ? 1 : 0),
+  ],
+  engagementByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: (i * 3) % 5),
+  ],
+  myCompleteness: 72,
+  programmeAvgCompleteness: 61,
+  programmePeerCount: 24,
+  mySearchedSkills: [
+    SkillCount(skill: 'Flutter', count: 6),
+    SkillCount(skill: 'SQL', count: 4),
+    SkillCount(skill: 'Python', count: 2),
   ],
 );
+
+const demoWantedSkills = [
+  SkillCount(skill: 'Flutter', count: 11),
+  SkillCount(skill: 'SQL', count: 9),
+  SkillCount(skill: 'Python', count: 8),
+  SkillCount(skill: 'React', count: 6),
+  SkillCount(skill: 'Java', count: 5),
+  SkillCount(skill: 'UI/UX Design', count: 4),
+];
 
 const demoAdminStats = AdminStats(
   totalUsers: 486,
@@ -1284,6 +1311,9 @@ class DemoAnalyticsRepository extends AnalyticsRepository {
 
   @override
   Future<StudentStats> forStudent(String userId) async => demoStudentStats;
+
+  @override
+  Future<List<SkillCount>> wantedSkills() async => demoWantedSkills;
 }
 
 class DemoStorageRepository extends StorageRepository {

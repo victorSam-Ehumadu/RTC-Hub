@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../core/supabase.dart';
 import '../models/profile.dart';
 
@@ -39,11 +41,23 @@ class ProfileRepository {
         'company_name.ilike.%$clean%,'
         'bio.ilike.%$clean%',
       );
+      unawaited(_logSkillSearch(clean));
     }
     if (role != null) query = query.eq('role', role);
 
     final rows = await query.order('profile_completeness', ascending: false).limit(limit);
     return rows.map(Profile.fromMap).toList();
+  }
+
+  /// Feeds the student dashboard's "most-searched skills" chart. Fire-and-
+  /// forget like [recordView]: the RPC itself only counts the term when it
+  /// matches a real skill, so this is safe to call on every search.
+  Future<void> _logSkillSearch(String term) async {
+    try {
+      await db.rpc('log_skill_search', params: {'p_term': term});
+    } catch (_) {
+      // analytics only
+    }
   }
 
   /// Alumni who studied the same course, for "Shadow-a-Senior".
