@@ -51,8 +51,8 @@ final demoMe = Profile(
   studentNumber: '202312345',
   bio: 'Third-year software dev. Flutter, Postgres, and far too much coffee. '
       'Currently building an attendance app for the campus library.',
-  faculty: 'Information Technology',
-  course: 'BSc Information Technology',
+  faculty: 'IT',
+  course: 'BSc IT (Bachelor of Science in Information Technology)',
   academicYear: '3rd Year',
   graduationYear: 2026,
   portfolioUrl: 'https://github.com/thabom',
@@ -68,8 +68,8 @@ final demoNaledi = Profile(
   status: 'ACTIVE',
   studentNumber: '202298117',
   bio: 'Data science student. I like graphs more than people.',
-  faculty: 'Information Technology',
-  course: 'BSc Data Science',
+  faculty: 'IT',
+  course: 'BSc IT (Bachelor of Science in Information Technology)',
   academicYear: '2nd Year',
   graduationYear: 2027,
   profileCompleteness: 72,
@@ -84,8 +84,8 @@ final demoSipho = Profile(
   status: 'ACTIVE',
   bio: 'Class of 2021. Backend engineer at Standard Bank. Happy to review CVs '
       'and mock-interview anyone who asks.',
-  faculty: 'Information Technology',
-  course: 'BSc Information Technology',
+  faculty: 'IT',
+  course: 'BSc IT (Bachelor of Science in Information Technology)',
   graduationYear: 2021,
   profileCompleteness: 90,
   createdAt: _daysAgo(900),
@@ -99,8 +99,8 @@ final demoAisha = Profile(
   status: 'ACTIVE',
   studentNumber: '202401882',
   bio: 'First-year. Learning Java the hard way.',
-  faculty: 'Information Technology',
-  course: 'Diploma in Information Technology',
+  faculty: 'IT',
+  course: 'DIT (Diploma in Information Technology)',
   academicYear: '1st Year',
   graduationYear: 2028,
   profileCompleteness: 41,
@@ -553,28 +553,28 @@ final demoLeaderboard = <LeaderboardEntry>[
     id: demoSipho.id,
     fullName: 'Sipho Khumalo',
     totalPoints: 480,
-    course: 'BSc Information Technology',
+    course: 'BSc IT (Bachelor of Science in Information Technology)',
     skillCount: 12,
   ),
   LeaderboardEntry(
     id: demoNaledi.id,
     fullName: 'Naledi Dlamini',
     totalPoints: 355,
-    course: 'BSc Data Science',
+    course: 'BSc IT (Bachelor of Science in Information Technology)',
     skillCount: 9,
   ),
   LeaderboardEntry(
     id: demoMe.id,
     fullName: 'Thabo Mokoena',
     totalPoints: 310,
-    course: 'BSc Information Technology',
+    course: 'BSc IT (Bachelor of Science in Information Technology)',
     skillCount: 5,
   ),
   LeaderboardEntry(
     id: demoAisha.id,
     fullName: 'Aisha Patel',
     totalPoints: 95,
-    course: 'Diploma in Information Technology',
+    course: 'DIT (Diploma in Information Technology)',
     skillCount: 3,
   ),
 ];
@@ -609,11 +609,38 @@ final demoStudentStats = StudentStats(
   skills: 5,
   connections: 3,
   profileViews: 128,
+  newConnections: 3,
+  postReactions: 41,
   viewsByDay: [
     for (var i = 29; i >= 0; i--)
-      DailyViews(date: _daysAgo(i), views: 2 + ((i * 7) % 9)),
+      DailyMetric(date: _daysAgo(i), value: 2 + ((i * 7) % 9)),
+  ],
+  connectionsByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: i % 6 == 0 ? 1 : 0),
+  ],
+  engagementByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: (i * 3) % 5),
+  ],
+  myCompleteness: 72,
+  programmeAvgCompleteness: 61,
+  programmePeerCount: 24,
+  mySearchedSkills: [
+    SkillCount(skill: 'Flutter', count: 6),
+    SkillCount(skill: 'SQL', count: 4),
+    SkillCount(skill: 'Python', count: 2),
   ],
 );
+
+const demoWantedSkills = [
+  SkillCount(skill: 'Flutter', count: 11),
+  SkillCount(skill: 'SQL', count: 9),
+  SkillCount(skill: 'Python', count: 8),
+  SkillCount(skill: 'React', count: 6),
+  SkillCount(skill: 'Java', count: 5),
+  SkillCount(skill: 'UI/UX Design', count: 4),
+];
 
 const demoAdminStats = AdminStats(
   totalUsers: 486,
@@ -1284,6 +1311,9 @@ class DemoAnalyticsRepository extends AnalyticsRepository {
 
   @override
   Future<StudentStats> forStudent(String userId) async => demoStudentStats;
+
+  @override
+  Future<List<SkillCount>> wantedSkills() async => demoWantedSkills;
 }
 
 class DemoStorageRepository extends StorageRepository {

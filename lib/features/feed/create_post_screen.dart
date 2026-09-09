@@ -86,11 +86,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           TextButton(
             onPressed: _busy ? null : _submit,
             child: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const DottedProgressIndicator(size: 16)
                 : const Text('Post'),
           ),
           const SizedBox(width: 8),

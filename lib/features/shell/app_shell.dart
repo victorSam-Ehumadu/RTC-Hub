@@ -33,8 +33,16 @@ class AppShell extends ConsumerWidget {
       data: (me) {
         if (me == null) {
           // Session exists but no profile row yet — the signup trigger is
-          // mid-flight, or the account was deleted underneath us.
-          return const Scaffold(body: Loading());
+          // mid-flight, or the account was deleted/created underneath us
+          // (e.g. added straight in Supabase Auth instead of through the
+          // app's signup, so handle_new_user() never ran). That first case
+          // resolves itself in a second or two; the second one never will,
+          // so this can't just spin forever with no way out.
+          return Scaffold(
+            body: _NoProfileView(
+              onRetry: () => ref.invalidate(myProfileProvider),
+            ),
+          );
         }
         if (!me.isActive) return AccountGateScreen(status: me.status);
 
@@ -43,6 +51,89 @@ class AppShell extends ConsumerWidget {
           bottomNavigationBar: _NavBar(shell: shell, isBusiness: me.isBusiness),
         );
       },
+    );
+  }
+}
+
+/// Shown in place of the endless spinner when a session exists but
+/// `profiles` has no matching row. Auto-retries once (the signup trigger is
+/// usually just mid-flight) and only then offers manual buttons, so a real
+/// stuck state is always recoverable instead of a permanent blank spinner.
+class _NoProfileView extends ConsumerStatefulWidget {
+  const _NoProfileView({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  ConsumerState<_NoProfileView> createState() => _NoProfileViewState();
+}
+
+class _NoProfileViewState extends ConsumerState<_NoProfileView> {
+  bool _showOptions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() => _showOptions = true);
+      widget.onRetry();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_showOptions) return const Loading();
+
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_search_outlined, size: 44),
+              const SizedBox(height: 16),
+              Text(
+                "We can't find your profile",
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Your account is signed in, but has no matching profile. '
+                'This can happen right after signup — try again in a moment '
+                '— or if the account was created outside the app.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  height: 1.5,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: widget.onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Try again'),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () async {
+                  await ref.read(authRepoProvider).signOut();
+                  if (context.mounted) context.go('/login');
+                },
+                child: const Text('Sign out'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

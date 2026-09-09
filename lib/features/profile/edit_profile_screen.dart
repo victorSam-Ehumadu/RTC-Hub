@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants.dart';
+import '../../core/theme.dart';
 import '../../data/storage_repository.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
@@ -115,9 +116,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _industry.text = me.industry ?? '';
       _location.text = me.companyLocation ?? '';
       _portfolio.text = me.portfolioUrl ?? '';
-      _faculty = me.faculty;
-      _course = me.course;
-      _year = me.academicYear;
+      // Guard against stored values that no longer exist in kFaculties /
+      // kAcademicYears (e.g. data from before a constants.dart edit, or a
+      // profile written outside the app) — DropdownButtonFormField asserts
+      // if its value doesn't match exactly one item, so anything unknown is
+      // dropped back to null rather than crashing the screen.
+      _faculty = kFaculties.any((f) => f.code == me.faculty) ? me.faculty : null;
+      _course =
+          coursesForFaculty(_faculty).contains(me.course) ? me.course : null;
+      _year = kAcademicYears.contains(me.academicYear) ? me.academicYear : null;
       _avatarUrl = me.avatarUrl;
       _visibleToBusiness = me.visibilityBusiness;
       _visibleToPeers = me.visibilityPeers;
@@ -130,11 +137,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           TextButton(
             onPressed: _busy ? null : _save,
             child: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const DottedProgressIndicator(size: 16)
                 : const Text('Save'),
           ),
           const SizedBox(width: 8),
@@ -154,7 +157,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   right: 0,
                   bottom: 0,
                   child: Material(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: AppColors.button,
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -162,14 +165,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(7),
                         child: _uploading
-                            ? const SizedBox(
-                                width: 15,
-                                height: 15,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                            ? const DottedProgressIndicator(
+                                size: 15,
+                                color: Colors.white,
                               )
                             : const Icon(Icons.camera_alt,
-                                size: 15, color: Color(0xFF04120A)),
+                                size: 15, color: Colors.white),
                       ),
                     ),
                   ),

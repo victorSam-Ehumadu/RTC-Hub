@@ -268,3 +268,8 @@ final studentStatsProvider =
     FutureProvider.autoDispose.family<StudentStats, String>((ref, userId) {
   return ref.watch(analyticsRepoProvider).forStudent(userId);
 });
+
+/// Platform-wide, not per-user — no `.family` needed.
+final wantedSkillsProvider = FutureProvider.autoDispose<List<SkillCount>>((ref) {
+  return ref.watch(analyticsRepoProvider).wantedSkills();
+});

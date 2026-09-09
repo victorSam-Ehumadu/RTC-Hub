@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -236,9 +238,96 @@ class Loading extends StatelessWidget {
   Widget build(BuildContext context) => const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: DottedProgressIndicator(size: 36),
         ),
       );
+}
+
+/// A ring of orbiting dots, in `AppColors.button`, used everywhere the app
+/// used to show Material's stock arc spinner — busy buttons and full-page
+/// loads alike, so every "working on it" moment reads the same way.
+class DottedProgressIndicator extends StatefulWidget {
+  const DottedProgressIndicator({
+    super.key,
+    this.size = 20,
+    this.color = AppColors.button,
+    this.dotCount = 8,
+  });
+
+  final double size;
+  final Color color;
+  final int dotCount;
+
+  @override
+  State<DottedProgressIndicator> createState() =>
+      _DottedProgressIndicatorState();
+}
+
+class _DottedProgressIndicatorState extends State<DottedProgressIndicator>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: widget.size,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) => CustomPaint(
+            painter: _DotsPainter(
+              progress: _controller.value,
+              color: widget.color,
+              dotCount: widget.dotCount,
+            ),
+          ),
+        ),
+      );
+}
+
+class _DotsPainter extends CustomPainter {
+  _DotsPainter({
+    required this.progress,
+    required this.color,
+    required this.dotCount,
+  });
+
+  final double progress;
+  final Color color;
+  final int dotCount;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    final dotRadius = radius / 5;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (var i = 0; i < dotCount; i++) {
+      final t = i / dotCount;
+      final angle = t * 2 * math.pi + progress * 2 * math.pi;
+      final offset = Offset(
+        center.dx + (radius - dotRadius) * math.cos(angle),
+        center.dy + (radius - dotRadius) * math.sin(angle),
+      );
+      // Fades each dot around the ring so the rotation reads clearly.
+      paint.color = color.withValues(alpha: 0.15 + 0.85 * t);
+      canvas.drawCircle(offset, dotRadius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DotsPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.dotCount != dotCount;
 }
 
 /// Section header used down the profile and admin screens.

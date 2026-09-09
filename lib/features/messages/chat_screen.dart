@@ -173,12 +173,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   const SizedBox(width: 6),
                   IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.button,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: _sending ? null : _send,
                     icon: _sending
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        ? const DottedProgressIndicator(
+                            size: 16,
+                            color: Colors.white,
                           )
                         : const Icon(Icons.send, size: 18),
                   ),

@@ -51,6 +51,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onPressed: () => context.push('/admin'),
                 icon: const Icon(Icons.admin_panel_settings_outlined),
               ),
+            if ((me?.isStudent ?? false) || (me?.isAlumni ?? false))
+              IconButton(
+                tooltip: 'Dashboard',
+                onPressed: () => context.push('/dashboard'),
+                icon: const Icon(Icons.trending_up),
+              ),
             IconButton(
               tooltip: 'Edit',
               onPressed: () => context.push('/edit-profile'),
@@ -207,6 +213,7 @@ class _CompletenessBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: profile.profileCompleteness / 100,
               minHeight: 6,
+              color: AppColors.accent,
               backgroundColor:
                   Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
             ),
@@ -374,21 +381,21 @@ class _SkillsSection extends ConsumerWidget {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add a skill'),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
-          onSubmitted: (v) => Navigator.pop(context, v),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
             child: const Text('Add'),
           ),
         ],
@@ -475,13 +482,24 @@ class _StatsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(studentStatsProvider(userId));
 
+    final me = ref.watch(meProvider);
+    final showDashboardLink = (me?.isStudent ?? false) || (me?.isAlumni ?? false);
+
     return stats.when(
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (s) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Your numbers'),
+          SectionHeader(
+            title: 'Your numbers',
+            action: showDashboardLink
+                ? TextButton(
+                    onPressed: () => context.push('/dashboard'),
+                    child: const Text('Full dashboard'),
+                  )
+                : null,
+          ),
           Row(
             children: [
               _Stat(label: 'Views', value: '${s.profileViews}'),
