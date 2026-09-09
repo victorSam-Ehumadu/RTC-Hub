@@ -381,21 +381,21 @@ class _SkillsSection extends ConsumerWidget {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add a skill'),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
-          onSubmitted: (v) => Navigator.pop(context, v),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
             child: const Text('Add'),
           ),
         ],
