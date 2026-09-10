@@ -7,6 +7,7 @@ import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../feed/post_card.dart';
+import '../shell/app_shell.dart';
 
 /// Someone's profile — theirs or your own.
 ///
@@ -42,7 +43,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSelf ? 'Your profile' : 'Profile'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: const HubBanner(),
+        iconTheme: const IconThemeData(color: hubBannerForeground),
+        actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+        title: Text(
+          isSelf ? 'Your profile' : 'Profile',
+          style: const TextStyle(
+            color: hubBannerForeground,
+            fontWeight: FontWeight.w800,
+            shadows: hubBannerTitleShadow,
+          ),
+        ),
         actions: [
           if (isSelf) ...[
             if (me?.isAdmin ?? false)
