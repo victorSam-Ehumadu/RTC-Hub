@@ -46,7 +46,16 @@ class _SubmitAnswerSheetState extends ConsumerState<_SubmitAnswerSheet> {
   final _note = TextEditingController();
   final _code = TextEditingController();
 
-  late _Mode _mode = widget.post.faculty == 'BUSINESS' ? _Mode.sheet : _Mode.code;
+  /// Which answer shapes this bounty accepts. An IT bounty wants code back,
+  /// a Business bounty wants a model. A cross-faculty post (a business
+  /// recruiting both) accepts either. A file is always allowed — sometimes
+  /// the answer genuinely is a document.
+  bool get _wantsCode =>
+      widget.post.faculty == null || widget.post.faculty == 'IT';
+  bool get _wantsSheet =>
+      widget.post.faculty == null || widget.post.faculty == 'BUSINESS';
+
+  late _Mode _mode = _wantsSheet && !_wantsCode ? _Mode.sheet : _Mode.code;
   String _language = 'dart';
 
   SheetDoc? _sheet;
@@ -215,18 +224,20 @@ class _SubmitAnswerSheetState extends ConsumerState<_SubmitAnswerSheet> {
 
             const SizedBox(height: 16),
             SegmentedButton<_Mode>(
-              segments: const [
-                ButtonSegment(
-                  value: _Mode.code,
-                  label: Text('Code'),
-                  icon: Icon(Icons.terminal, size: 15),
-                ),
-                ButtonSegment(
-                  value: _Mode.sheet,
-                  label: Text('Sheet'),
-                  icon: Icon(Icons.grid_on, size: 15),
-                ),
-                ButtonSegment(
+              segments: [
+                if (_wantsCode)
+                  const ButtonSegment(
+                    value: _Mode.code,
+                    label: Text('Code'),
+                    icon: Icon(Icons.terminal, size: 15),
+                  ),
+                if (_wantsSheet)
+                  const ButtonSegment(
+                    value: _Mode.sheet,
+                    label: Text('Sheet'),
+                    icon: Icon(Icons.grid_on, size: 15),
+                  ),
+                const ButtonSegment(
                   value: _Mode.file,
                   label: Text('File'),
                   icon: Icon(Icons.attach_file, size: 15),

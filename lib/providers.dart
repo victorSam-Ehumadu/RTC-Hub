@@ -18,6 +18,7 @@ import 'data/storage_repository.dart';
 import 'models/assistant.dart';
 import 'models/opportunity.dart';
 import 'models/post.dart';
+import 'models/analytics.dart';
 import 'models/profile.dart';
 import 'models/recommendation.dart';
 import 'models/social.dart';
@@ -383,4 +384,29 @@ final suggestedConnectionsProvider =
 final viewedProfileProvider =
     FutureProvider.autoDispose.family<Profile?, String>((ref, userId) {
   return ref.watch(engagementRepoProvider).profileForViewer(userId);
+});
+
+// ─── Dashboards (§2.7) ────────────────────────────────────────
+
+final adminAnalyticsRepoProvider =
+    Provider((_) => const AdminAnalyticsRepository());
+final businessAnalyticsRepoProvider =
+    Provider((_) => const BusinessAnalyticsRepository());
+
+/// How far back the dashboards look. Shared by both so the range selector
+/// reads the same on either screen.
+final dashboardRangeProvider = StateProvider.autoDispose<int>((_) => 30);
+
+final adminDashboardProvider =
+    FutureProvider.autoDispose<AdminAnalytics>((ref) {
+  return ref
+      .watch(adminAnalyticsRepoProvider)
+      .dashboard(days: ref.watch(dashboardRangeProvider));
+});
+
+final businessDashboardProvider =
+    FutureProvider.autoDispose<BusinessAnalytics>((ref) {
+  return ref
+      .watch(businessAnalyticsRepoProvider)
+      .dashboard(days: ref.watch(dashboardRangeProvider));
 });

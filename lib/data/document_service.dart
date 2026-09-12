@@ -88,8 +88,14 @@ class DocumentService {
         : 'Sheet1';
 
     // createExcel() seeds a default sheet; rename it rather than adding a
-    // second one and leaving an empty tab in the delivered file.
-    book.rename(book.getDefaultSheet()!, sheetName);
+    // second one and leaving an empty tab in the delivered file. The getter
+    // is nullable and a bang here would crash the export rather than produce
+    // a slightly oddly-named tab, which is the wrong trade.
+    final seeded = book.getDefaultSheet();
+    if (seeded != null && seeded != sheetName) {
+      book.rename(seeded, sheetName);
+    }
+    // Indexing creates the sheet when the rename did not happen.
     final tab = book[sheetName];
 
     for (var c = 0; c < sheet.columns.length; c++) {

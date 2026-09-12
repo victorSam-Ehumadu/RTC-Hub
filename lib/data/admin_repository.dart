@@ -1,5 +1,6 @@
 import '../core/supabase.dart';
 import '../models/opportunity.dart';
+import '../models/analytics.dart';
 import '../models/profile.dart';
 
 /// Replaces `/api/admin` and `/api/analytics`.
@@ -94,6 +95,55 @@ class AdminRepository {
       bounties: at('bounties'),
       pendingOpportunities: at('pending_opportunities'),
       openFlags: at('open_flags'),
+    );
+  }
+}
+
+/// The administrator dashboard (§2.7).
+///
+/// One RPC rather than a dozen queries: the brief asks for users by type,
+/// monthly active users, registrations over time, content volume, flagged
+/// count and the business approval pipeline, and assembling that client-side
+/// would be thirteen round-trips to paint one screen.
+class AdminAnalyticsRepository {
+  const AdminAnalyticsRepository();
+
+  Future<AdminAnalytics> dashboard({int days = 30}) async {
+    final row = await db.rpc('admin_dashboard', params: {'p_days': days});
+    return AdminAnalytics.fromMap(Map<String, dynamic>.from(row as Map));
+  }
+}
+
+/// The business dashboard (§2.7).
+class BusinessAnalyticsRepository {
+  const BusinessAnalyticsRepository();
+
+  Future<BusinessAnalytics> dashboard({int days = 30}) async {
+    // Three calls, because the pipeline is a row set and the other two are
+    // documents. Issued together so the screen waits once.
+    final results = await Future.wait<dynamic>([
+      db.rpc('business_pipeline'),
+      db.rpc('business_candidate_mix'),
+      db.rpc('business_reach', params: {'p_days': days}),
+    ]);
+
+    final pipeline = (results[0] as List).cast<Map<String, dynamic>>();
+    final mix = Map<String, dynamic>.from(results[1] as Map);
+    final reach = Map<String, dynamic>.from(results[2] as Map);
+
+    return BusinessAnalytics(
+      pipeline: pipeline.map(PipelineRow.fromMap).toList(),
+      byProgramme: DataPoint.listFrom(mix['by_programme']),
+      byYear: DataPoint.listFrom(mix['by_year']),
+      byFaculty: DataPoint.listFrom(mix['by_faculty']),
+      topSkills: DataPoint.listFrom(mix['top_skills']),
+      applicationsByDay: DataPoint.listFrom(reach['applications_by_day']),
+      profileViewsByDay: DataPoint.listFrom(reach['profile_views_by_day']),
+      totalApplicants: (mix['total_applicants'] as num?)?.toInt() ?? 0,
+      activeListings: (reach['active_listings'] as num?)?.toInt() ?? 0,
+      pendingListings: (reach['pending_listings'] as num?)?.toInt() ?? 0,
+      applicationsPerListing:
+          (reach['applications_per_listing'] as num?)?.toDouble() ?? 0,
     );
   }
 }
