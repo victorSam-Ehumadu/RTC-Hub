@@ -1,0 +1,11 @@
+# The Gradle wrapper is committed, so its line endings and exec bit have to
+# survive a checkout on every platform.
+#
+# gradlew is run by /bin/sh on macOS and Linux: CRLF there fails with
+# "bad interpreter: /bin/sh^M". gradlew.bat is run by cmd.exe and wants CRLF.
+gradlew            text eol=lf
+gradlew.bat        text eol=crlf
+*.jar              binary
+
+# SQL migrations are pasted into the Supabase editor; keep them LF.
+*.sql              text eol=lf
