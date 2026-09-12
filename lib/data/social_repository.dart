@@ -61,6 +61,13 @@ class ConnectionRepository {
       db.from('connections').delete().eq('id', connectionId);
 }
 
+/// Distinguishes one subscription from the next.
+///
+/// A counter rather than a timestamp: two subscriptions created in the same
+/// microsecond would collide, and the whole point is that they cannot.
+int _channelSeq = 0;
+String _nonce() => '${_channelSeq++}';
+
 /// Replaces `/api/messages` and the Socket.IO chat handlers.
 ///
 /// Live updates come from Supabase Realtime instead of a socket server.
@@ -160,13 +167,19 @@ class MessageRepository {
   /// subscribes to the table and RLS does the filtering; callers narrow to a
   /// single thread with [Message.inThread].
   RealtimeChannel subscribe(void Function(Message) onMessage) {
-    // The `$` here was escaped, so every client joined the literal topic
-    // "messages:$requireUserId" and shared one channel. RLS still filtered
-    // delivery, so nothing leaked — but a shared topic is not what the code
-    // claimed, and it made per-user debugging impossible.
+    // Two things were wrong here. The `$` was escaped, so every client joined
+    // the literal topic "messages:$requireUserId" and shared one channel —
+    // RLS still filtered delivery so nothing leaked, but it was not what the
+    // code claimed.
+    //
+    // The topic is also unique per subscription, not just per user. Callers
+    // invalidate threadProvider after sending, which disposes this channel
+    // and immediately opens another; removeChannel() is asynchronous, so a
+    // same-named channel created in that window can fail to join and take
+    // live updates down silently until the screen is reopened.
     final me = requireUserId;
     return db
-        .channel('messages:$me')
+        .channel('messages:$me:${_nonce()}')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
@@ -229,7 +242,7 @@ class NotificationRepository {
   RealtimeChannel subscribe(void Function(AppNotification) onNotification) {
     final me = requireUserId;
     return db
-        .channel('notifications:$me')
+        .channel('notifications:$me:${_nonce()}')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',

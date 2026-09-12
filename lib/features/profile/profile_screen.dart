@@ -40,8 +40,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ref.read(profileRepoProvider).recordView(targetId);
     }
 
-    final profile =
-        isSelf && me != null ? AsyncValue.data(me) : ref.watch(profileProvider(targetId));
+    // Your own profile comes straight from myProfileProvider — unfiltered,
+    // because hiding sections from yourself would make the toggles in the
+    // editor impossible to read. Anyone else's goes through
+    // profile_for_viewer(), which removes sections they have hidden *before*
+    // the row leaves the server. Using profileProvider here would hand the
+    // device the whole row and leave the toggles decorative.
+    final profile = isSelf && me != null
+        ? AsyncValue<Profile?>.data(me)
+        : ref.watch(viewedProfileProvider(targetId));
 
     return Scaffold(
       appBar: AppBar(
@@ -96,39 +103,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         loading: () => const ProfileSkeleton(),
         error: (err, _) => ErrorView(
           error: err,
-          onRetry: () => ref.invalidate(profileProvider(targetId)),
+          onRetry: () => ref.invalidate(viewedProfileProvider(targetId)),
         ),
-        data: (p) => RefreshIndicator(
-          onRefresh: () async {
-            ref
-              ..invalidate(myProfileProvider)
-              ..invalidate(profileProvider(targetId))
-              ..invalidate(skillsProvider(targetId))
-              ..invalidate(postsByAuthorProvider(targetId));
-          },
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-            children: [
-              _Header(profile: p, isSelf: isSelf),
-              if (isSelf) _CompletenessBar(profile: p),
-              if (!isSelf) _ConnectRow(profile: p),
-              if (p.bio != null && p.bio!.isNotEmpty) ...[
-                const SectionHeader(title: 'About'),
-                Text(p.bio!, style: const TextStyle(height: 1.5)),
+        data: (profileOrNull) {
+          // Null means this account is not visible to you — hidden from
+          // peers, hidden from businesses, suspended, or gone. A dead end
+          // with an explanation beats a Postgres error or a blank page.
+          final p = profileOrNull;
+          if (p == null) {
+            return const EmptyState(
+              icon: Icons.visibility_off_outlined,
+              title: 'Profile not available',
+              message:
+                  'This person has limited who can see their profile, '
+                  'or the account is no longer active.',
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref
+                ..invalidate(myProfileProvider)
+                ..invalidate(viewedProfileProvider(targetId))
+                ..invalidate(skillsProvider(targetId))
+                ..invalidate(postsByAuthorProvider(targetId));
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+              children: [
+                _Header(profile: p, isSelf: isSelf),
+                if (isSelf) _CompletenessBar(profile: p),
+                if (!isSelf) _ConnectRow(profile: p),
+                if (p.bio != null && p.bio!.isNotEmpty) ...[
+                  const SectionHeader(title: 'About'),
+                  Text(p.bio!, style: const TextStyle(height: 1.5)),
+                ],
+                _SkillsSection(userId: p.id, isSelf: isSelf),
+                _ExperienceSection(userId: p.id, isSelf: isSelf),
+                RecommendationsSection(
+                  userId: p.id,
+                  isSelf: isSelf,
+                  subjectName: p.fullName.split(' ').first,
+                ),
+                if (isSelf) _StatsSection(userId: p.id),
+                _PostsSection(userId: p.id),
               ],
-              _SkillsSection(userId: p.id, isSelf: isSelf),
-              _ExperienceSection(userId: p.id, isSelf: isSelf),
-              RecommendationsSection(
-                userId: p.id,
-                isSelf: isSelf,
-                subjectName: p.fullName.split(' ').first,
-              ),
-              if (isSelf) _StatsSection(userId: p.id),
-              _PostsSection(userId: p.id),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -156,20 +179,18 @@ class _Header extends ConsumerWidget {
                 children: [
                   Text(
                     profile.displayName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     profile.subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.65),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -238,8 +259,9 @@ class _CompletenessBar extends StatelessWidget {
               value: profile.profileCompleteness / 100,
               minHeight: 6,
               color: AppColors.accent,
-              backgroundColor:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -263,10 +285,8 @@ class _ConnectRow extends ConsumerWidget {
         children: [
           Expanded(
             child: connection.when(
-              loading: () => const OutlinedButton(
-                onPressed: null,
-                child: Text('…'),
-              ),
+              loading: () =>
+                  const OutlinedButton(onPressed: null, child: Text('…')),
               error: (_, _) => const SizedBox.shrink(),
               data: (c) {
                 if (c == null) {
@@ -348,10 +368,9 @@ class _SkillsSection extends ConsumerWidget {
                       : 'No skills listed yet.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 )
               : Wrap(
@@ -361,8 +380,11 @@ class _SkillsSection extends ConsumerWidget {
                     for (final s in list)
                       InputChip(
                         avatar: s.verified
-                            ? const Icon(Icons.verified,
-                                size: 15, color: AppColors.accent)
+                            ? const Icon(
+                                Icons.verified,
+                                size: 15,
+                                color: AppColors.accent,
+                              )
                             : null,
                         label: Text(
                           s.endorsements > 0
@@ -381,7 +403,9 @@ class _SkillsSection extends ConsumerWidget {
                                     showMessage(context, 'Endorsed ${s.name}.');
                                   }
                                 } catch (error) {
-                                  if (context.mounted) showError(context, error);
+                                  if (context.mounted) {
+                                    showError(context, error);
+                                  }
                                 }
                               },
                         onDeleted: isSelf
@@ -474,10 +498,9 @@ class _ExperienceSection extends ConsumerWidget {
                 'No experience added yet.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             for (final w in list)
@@ -519,7 +542,8 @@ class _StatsSection extends ConsumerWidget {
     final stats = ref.watch(studentStatsProvider(userId));
 
     final me = ref.watch(meProvider);
-    final showDashboardLink = (me?.isStudent ?? false) || (me?.isAlumni ?? false);
+    final showDashboardLink =
+        (me?.isStudent ?? false) || (me?.isAlumni ?? false);
 
     return stats.when(
       loading: () => const SizedBox.shrink(),
@@ -575,10 +599,9 @@ class _Stat extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10.5,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -609,10 +632,9 @@ class _PostsSection extends ConsumerWidget {
               'Nothing posted yet.',
               style: TextStyle(
                 fontSize: 13,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           for (final p in list)

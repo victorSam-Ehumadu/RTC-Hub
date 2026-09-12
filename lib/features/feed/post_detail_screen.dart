@@ -91,7 +91,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Future<void> _accept(String commentId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Accept this answer?'),
         content: const Text(
           'The Logic Points move to whoever wrote it, and the bounty closes. '
@@ -99,11 +99,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Accept'),
           ),
         ],

@@ -16,8 +16,28 @@ class BountyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A selection made before switching accounts would otherwise persist and
+    // filter to a faculty this user cannot read — an empty list with no
+    // visible cause.
+    ref.listen(meProvider, (_, me) {
+      final allowed = me?.contentInterests ?? const <String>[];
+      final chosen = ref.read(bountyFacultyProvider);
+      if (chosen != null && !allowed.contains(chosen)) {
+        ref.read(bountyFacultyProvider.notifier).state = null;
+      }
+    });
+
     final bounties = ref.watch(bountiesProvider);
     final faculty = ref.watch(bountyFacultyProvider);
+
+    // Only the faculties this account can actually read. posts_select (0007)
+    // already refuses the rest, so offering a chip for the other faculty
+    // produced an empty list that looked like a broken screen rather than a
+    // rule working. With a single faculty the filter is a no-op, so it is
+    // not drawn at all.
+    final mine = ref.watch(meProvider)?.contentInterests ?? const <String>[];
+    final selectable = kFaculties.where((f) => mine.contains(f.code)).toList();
+    final showFilter = selectable.length > 1;
 
     return Scaffold(
       appBar: HubAppBar(
@@ -37,32 +57,57 @@ class BountyScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 46,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              children: [
-                FilterChip(
-                  label: const Text('All'),
-                  selected: faculty == null,
-                  onSelected: (_) =>
-                      ref.read(bountyFacultyProvider.notifier).state = null,
-                ),
-                const SizedBox(width: 8),
-                for (final f in kFaculties) ...[
+          if (showFilter)
+            SizedBox(
+              height: 46,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                children: [
                   FilterChip(
-                    label: Text(f.code == 'IT' ? 'IT' : 'Business'),
-                    selected: faculty == f.code,
-                    onSelected: (_) => ref
-                        .read(bountyFacultyProvider.notifier)
-                        .state = faculty == f.code ? null : f.code,
+                    label: const Text('All'),
+                    selected: faculty == null,
+                    onSelected: (_) =>
+                        ref.read(bountyFacultyProvider.notifier).state = null,
                   ),
                   const SizedBox(width: 8),
+                  for (final f in selectable) ...[
+                    FilterChip(
+                      label: Text(f.code == 'IT' ? 'IT' : 'Business'),
+                      selected: faculty == f.code,
+                      onSelected: (_) =>
+                          ref.read(bountyFacultyProvider.notifier).state =
+                              faculty == f.code ? null : f.code,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ],
-              ],
+              ),
+            )
+          else
+            // Say what is being shown, rather than showing a filtered list
+            // with nothing to indicate it was filtered.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+              child: Row(
+                children: [
+                  FacultyChip(
+                    faculty: mine.isEmpty ? null : mine.first,
+                    compact: true,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Bounties from your faculty',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(bountiesProvider),
@@ -86,7 +131,8 @@ class BountyScreen extends ConsumerWidget {
                                 'Stuck on something? Post it as a bounty and '
                                 'put 10 Logic Points on the answer.',
                             action: FilledButton(
-                              onPressed: () => context.push('/compose?bounty=1'),
+                              onPressed: () =>
+                                  context.push('/compose?bounty=1'),
                               child: const Text('Post a bounty'),
                             ),
                           ),
@@ -151,10 +197,9 @@ class _BoardSummary extends ConsumerWidget {
                     'Earned by solving other people’s problems.',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

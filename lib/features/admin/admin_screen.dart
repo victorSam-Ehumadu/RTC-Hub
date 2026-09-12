@@ -141,7 +141,7 @@ class _OverviewTab extends ConsumerWidget {
 
     final send = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Announcement'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -162,11 +162,11 @@ class _OverviewTab extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Send to everyone'),
           ),
         ],

@@ -131,8 +131,15 @@ final postsByAuthorProvider =
 
 // ─── Profiles ─────────────────────────────────────────────────
 
+/// A profile by id. Null when the caller may not see it — a hidden profile
+/// is a state to explain, not an error to throw.
+///
+/// For *someone else's* profile prefer [viewedProfileProvider], which routes
+/// through `profile_for_viewer()` so per-section visibility is applied before
+/// the data leaves the server. This one returns the whole row and is for your
+/// own profile, or where only identity fields are needed.
 final profileProvider =
-    FutureProvider.autoDispose.family<Profile, String>((ref, userId) {
+    FutureProvider.autoDispose.family<Profile?, String>((ref, userId) {
   return ref.watch(profileRepoProvider).byId(userId);
 });
 
@@ -157,7 +164,12 @@ final leaderboardProvider =
 });
 
 final peopleSearchProvider = FutureProvider.autoDispose
-    .family<List<Profile>, String>((ref, term) {
+    .family<List<Profile>, String>((ref, term) async {
+  // The picker rebuilds on every keystroke, so without this a five-letter
+  // name is five round-trips and five sets of results racing to render.
+  if (term.trim().isNotEmpty) {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
   return ref.watch(profileRepoProvider).search(term);
 });
 

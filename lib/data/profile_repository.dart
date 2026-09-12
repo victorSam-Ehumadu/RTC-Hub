@@ -8,9 +8,16 @@ import '../models/profile.dart';
 class ProfileRepository {
   const ProfileRepository();
 
-  Future<Profile> byId(String userId) async {
-    final row = await db.from('profiles').select().eq('id', userId).single();
-    return Profile.fromMap(row);
+  /// A profile by id, or null when the caller may not see it.
+  ///
+  /// `maybeSingle`, not `single`: a profile hidden by visibility_peers returns
+  /// no rows, and `single` turns that into "JSON object requested, multiple
+  /// (or no) rows returned" — a Postgres sentence shown to a student who just
+  /// tapped a name. Null is a state the UI can explain.
+  Future<Profile?> byId(String userId) async {
+    final row =
+        await db.from('profiles').select().eq('id', userId).maybeSingle();
+    return row == null ? null : Profile.fromMap(row);
   }
 
   /// Saves the editable subset of a profile. `role`, `status` and

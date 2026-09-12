@@ -63,6 +63,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
   }
 
+  /// The same gate `build` applies, read where `_submit` can see it. Keeping
+  /// one source of truth would mean threading state through; re-deriving it
+  /// from the profile is cheaper and cannot drift.
+  String? get _facultyForPosting => ref.read(meProvider)?.postingFaculty;
+  bool get _canCode => _facultyForPosting == null || _facultyForPosting == 'IT';
+  bool get _canSheet =>
+      _facultyForPosting == null || _facultyForPosting == 'BUSINESS';
+
   Future<void> _submit() async {
     if (_content.text.trim().isEmpty) {
       showMessage(context, 'Write something first.');
@@ -70,21 +78,21 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(postRepoProvider).create(
+      await ref
+          .read(postRepoProvider)
+          .create(
             content: _content.text,
-            type: _isBounty
-                ? 'BOUNTY'
-                : (_attachCode ? 'CODE' : 'TEXT'),
-            codeLanguage: _attachCode ? _language : null,
-            codeSnippet: _attachCode && _code.text.trim().isNotEmpty
+            type: _isBounty ? 'BOUNTY' : (_attachCode ? 'CODE' : 'TEXT'),
+            codeLanguage: _canCode && _attachCode ? _language : null,
+            codeSnippet: _canCode && _attachCode && _code.text.trim().isNotEmpty
                 ? _code.text
                 : null,
             isBounty: _isBounty,
             bountyModule: _isBounty && _module.text.trim().isNotEmpty
                 ? _module.text.trim()
                 : null,
-            sheetData: _sheet?.toMap(),
-            sheetName: _sheet?.name,
+            sheetData: _canSheet ? _sheet?.toMap() : null,
+            sheetName: _canSheet ? _sheet?.name : null,
           );
 
       ref.invalidate(feedProvider);
@@ -105,6 +113,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final me = ref.watch(meProvider);
+
+    // Which attachment this author gets. A student or alumnus is bound to
+    // their faculty; a business posting to one cohort follows that cohort;
+    // anyone spanning both (admin, a business recruiting both) gets both.
+    final faculty = me?.postingFaculty;
+    final canAttachCode = faculty == null || faculty == 'IT';
+    final canAttachSheet = faculty == null || faculty == 'BUSINESS';
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_isBounty ? 'Post a bounty' : 'New post'),
@@ -127,7 +144,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               value: _isBounty,
               onChanged: (v) => setState(() {
                 _isBounty = v;
-                if (v) _attachCode = true;
+                // Only pre-open the snippet box for someone who can use it;
+                // a Business bounty wants a spreadsheet, not Java.
+                if (v && canAttachCode) _attachCode = true;
               }),
               title: const Text('Ask as a bounty'),
               subtitle: Text(
@@ -135,10 +154,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 'accepted answer.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               secondary: const Icon(Icons.bolt, color: AppColors.points),
@@ -153,7 +171,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               decoration: InputDecoration(
                 hintText: _isBounty
                     ? 'What are you stuck on? Describe what you expected and '
-                        'what actually happened.'
+                          'what actually happened.'
                     : 'Share what you are building…',
               ),
             ),
@@ -170,68 +188,72 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               ),
             ],
 
-            const SectionHeader(title: 'Code'),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _attachCode,
-              onChanged: (v) => setState(() => _attachCode = v),
-              title: const Text('Attach a snippet'),
-              secondary: const Icon(Icons.code),
-            ),
+            if (canAttachCode) ...[
+              const SectionHeader(title: 'Code'),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _attachCode,
+                onChanged: (v) => setState(() => _attachCode = v),
+                title: const Text('Attach a snippet'),
+                secondary: const Icon(Icons.code),
+              ),
 
-            if (_attachCode) ...[
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _language,
-                decoration: const InputDecoration(labelText: 'Language'),
-                items: [
-                  for (final lang in kCodeLanguages)
-                    DropdownMenuItem(value: lang, child: Text(lang)),
-                ],
-                onChanged: (v) => setState(() => _language = v ?? 'dart'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _code,
-                maxLines: 14,
-                minLines: 6,
-                style: monoStyle(size: 13),
-                decoration: const InputDecoration(
-                  hintText: 'Paste your code here',
-                  alignLabelWithHint: true,
+              if (_attachCode) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _language,
+                  decoration: const InputDecoration(labelText: 'Language'),
+                  items: [
+                    for (final lang in kCodeLanguages)
+                      DropdownMenuItem(value: lang, child: Text(lang)),
+                  ],
+                  onChanged: (v) => setState(() => _language = v ?? 'dart'),
                 ),
-              ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _code,
+                  maxLines: 14,
+                  minLines: 6,
+                  style: monoStyle(size: 13),
+                  decoration: const InputDecoration(
+                    hintText: 'Paste your code here',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
             ],
 
-            const SectionHeader(title: 'Spreadsheet'),
-            if (_sheet == null)
-              OutlinedButton.icon(
-                onPressed: _importSheet,
-                icon: const Icon(Icons.upload_file, size: 17),
-                label: const Text('Attach a .xlsx or .csv'),
-              )
-            else ...[
-              SheetPreview(
-                sheet: _sheet!,
-                title: _content.text.trim().isEmpty
-                    ? 'sheet'
-                    : _content.text.trim(),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: _importSheet,
-                    icon: const Icon(Icons.swap_horiz, size: 16),
-                    label: const Text('Replace'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => setState(() => _sheet = null),
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Remove'),
-                  ),
-                ],
-              ),
+            if (canAttachSheet) ...[
+              const SectionHeader(title: 'Spreadsheet'),
+              if (_sheet == null)
+                OutlinedButton.icon(
+                  onPressed: _importSheet,
+                  icon: const Icon(Icons.upload_file, size: 17),
+                  label: const Text('Attach a .xlsx or .csv'),
+                )
+              else ...[
+                SheetPreview(
+                  sheet: _sheet!,
+                  title: _content.text.trim().isEmpty
+                      ? 'sheet'
+                      : _content.text.trim(),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _importSheet,
+                      icon: const Icon(Icons.swap_horiz, size: 16),
+                      label: const Text('Replace'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _sheet = null),
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),

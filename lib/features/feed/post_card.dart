@@ -222,7 +222,7 @@ class _ReactionButton extends StatelessWidget {
         onLongPress: () async {
           final picked = await showModalBottomSheet<String>(
             context: context,
-            builder: (_) => SafeArea(
+            builder: (dialogContext) => SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -231,7 +231,7 @@ class _ReactionButton extends StatelessWidget {
                     for (final emoji in kReactionEmojis)
                       IconButton(
                         iconSize: 30,
-                        onPressed: () => Navigator.pop(context, emoji),
+                        onPressed: () => Navigator.pop(dialogContext, emoji),
                         icon: Text(emoji, style: const TextStyle(fontSize: 26)),
                       ),
                   ],

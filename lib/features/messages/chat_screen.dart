@@ -87,41 +87,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: other.when(
           loading: () => const Text('…'),
           error: (_, _) => const Text('Chat'),
-          data: (p) => InkWell(
-            onTap: () => context.push('/user/${p.id}'),
-            child: Row(
-              children: [
-                Avatar(profile: p, radius: 16),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+          // Null when the other person has hidden their profile. The chat
+          // itself still works — messages_select keys off sender/receiver,
+          // not profile visibility — so fall back to a plain title rather
+          // than breaking a conversation that is perfectly readable.
+          data: (p) => p == null
+              ? const Text('Chat')
+              : InkWell(
+                  onTap: () => context.push('/user/${p.id}'),
+                  child: Row(
                     children: [
-                      Text(
-                        p.displayName,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w700),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        p.subtitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
+                      Avatar(profile: p, radius: 16),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              p.displayName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              p.subtitle,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
         ),
       ),
       body: Column(
@@ -145,7 +152,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   controller: _scroll,
                   reverse: true, // newest at the bottom, grows upward
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 14),
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                   itemCount: messages.length,
                   itemBuilder: (_, i) {
                     final message = messages[messages.length - 1 - i];
@@ -181,7 +190,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         hintText: 'Message…',
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -244,8 +255,9 @@ class _Bubble extends StatelessWidget {
           ),
         ),
         child: Column(
-          crossAxisAlignment:
-              mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: mine
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(message.content, style: const TextStyle(height: 1.4)),
             const SizedBox(height: 3),

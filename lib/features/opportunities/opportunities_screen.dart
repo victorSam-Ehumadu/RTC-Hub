@@ -124,7 +124,7 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
     final controller = TextEditingController();
     final note = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Apply: ${opportunity.title}'),
         content: TextField(
           controller: controller,
@@ -136,11 +136,11 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
             child: const Text('Apply'),
           ),
         ],
@@ -384,7 +384,7 @@ class _MyListingCard extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => SizedBox(
+      builder: (dialogContext) => SizedBox(
         height: MediaQuery.sizeOf(context).height * 0.75,
         child: Consumer(
           builder: (context, ref, _) {
@@ -405,7 +405,7 @@ class _MyListingCard extends ConsumerWidget {
                         final app = list[i];
                         return ListTile(
                           onTap: () {
-                            Navigator.pop(context);
+                            Navigator.pop(dialogContext);
                             context.push('/user/${app.applicantId}');
                           },
                           leading: Avatar(profile: app.applicant, radius: 20),
