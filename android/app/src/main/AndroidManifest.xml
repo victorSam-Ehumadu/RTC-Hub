@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds talk to Supabase over HTTPS. The debug and
+         profile manifests declare this for the Flutter tool, so its
+         absence here only shows up in a release APK. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="rtc_hub"
         android:name="${applicationName}"

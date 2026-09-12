@@ -77,6 +77,11 @@ rejects it.
 ## Commands
 
 ```bash
+.un                                            # debug on a connected device
+.un demo                                       # UI only, no Supabase needed
+./run.sh / ./run.sh demo                         # same, on macOS and Linux
+
+# what the wrappers expand to, if you prefer typing it out:
 flutter run --dart-define-from-file=env.json     # debug on a connected device
 flutter run --dart-define=DEMO=true              # UI only, no Supabase needed
 flutter analyze                                  # static analysis

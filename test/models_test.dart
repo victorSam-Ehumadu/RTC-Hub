@@ -13,8 +13,16 @@ void main() {
       expect(isValidStudentEmail('  202512345@MY.RICHFIELD.AC.ZA '), isTrue);
     });
 
-    test('rejects a non-Richfield domain', () {
+    test('accepts the AAA domains', () {
+      // §2.1 requires these alongside Richfield's.
+      expect(isValidStudentEmail('202512345@my.aaa.ac.za'), isTrue);
+      expect(isValidStudentEmail('202512345@aaa.ac.za'), isTrue);
+    });
+
+    test('rejects a non-campus domain', () {
       expect(isValidStudentEmail('202512345@gmail.com'), isFalse);
+      expect(isValidStudentEmail('202512345@aaa.co.za'), isFalse);
+      expect(isValidStudentEmail('202512345@notaaa.ac.za'), isFalse);
     });
 
     test('rejects a prefix that is not exactly 9 digits', () {

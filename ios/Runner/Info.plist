@@ -6,6 +6,13 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- image_picker is used for avatar and CV uploads. iOS terminates the
+	     app immediately if a usage string is missing, so these are required,
+	     not optional. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RTC Hub needs access to your photos so you can set a profile picture and attach media to a post.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RTC Hub needs camera access so you can take a profile picture or capture your student card for verification.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Rtc Hub</string>
 	<key>CFBundleExecutable</key>

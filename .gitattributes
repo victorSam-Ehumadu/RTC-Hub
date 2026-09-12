@@ -1,0 +1,8 @@
+# Launch wrappers: run.sh is executed by /bin/sh, run.ps1 by PowerShell.
+# This repo is worked from Windows, so without these autocrlf writes CRLF into
+# run.sh and Linux fails it with "bad interpreter: /bin/sh^M".
+run.sh             text eol=lf
+run.ps1            text eol=crlf
+
+# SQL migrations are pasted into the Supabase editor; keep them LF.
+*.sql              text eol=lf
