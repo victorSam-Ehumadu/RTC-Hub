@@ -10,6 +10,13 @@ import '../models/profile.dart';
 /// to Supabase Auth as user metadata, and the `handle_new_user` trigger builds
 /// the `profiles` row inside the same transaction. That is what keeps `role`
 /// and `status` out of the client's control.
+/// What happened when an account was created.
+///
+/// Three outcomes rather than a bool, because "confirm your email" and "that
+/// address already has an account" need different screens and the caller
+/// cannot tell them apart from a null session alone.
+enum SignUpOutcome { signedIn, confirmEmail, alreadyRegistered }
+
 class AuthRepository {
   const AuthRepository();
 
@@ -24,7 +31,15 @@ class AuthRepository {
     );
   }
 
-  Future<void> signUp({
+  /// Registers an account.
+  ///
+  /// Returns [SignUpOutcome.confirmEmail] when Supabase created the user but
+  /// no session, which is what happens whenever the project has "Confirm
+  /// email" switched on. The caller has to handle that: the router only
+  /// moves off /signup once a session exists, so assuming one always follows
+  /// signUp leaves the user staring at the form they just submitted with a
+  /// success message on screen.
+  Future<SignUpOutcome> signUp({
     required String email,
     required String password,
     required String fullName,
@@ -48,7 +63,7 @@ class AuthRepository {
       );
     }
 
-    await db.auth.signUp(
+    final response = await db.auth.signUp(
       email: clean,
       password: password,
       data: {
@@ -66,7 +81,21 @@ class AuthRepository {
           'content_interests': contentInterests,
       },
     );
+
+    if (response.session != null) return SignUpOutcome.signedIn;
+    if (response.user != null) return SignUpOutcome.confirmEmail;
+
+    // Supabase returns a user with no identities when the address is already
+    // registered, rather than erroring — telling the caller it worked would
+    // send them to an inbox that will never receive anything.
+    return SignUpOutcome.alreadyRegistered;
   }
+
+  /// Resends the confirmation mail, for the "did not arrive" case.
+  Future<void> resendConfirmation(String email) => db.auth.resend(
+        type: OtpType.signup,
+        email: email.trim().toLowerCase(),
+      );
 
   Future<void> signOut() => db.auth.signOut();
 

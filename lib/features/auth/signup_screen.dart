@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../data/auth_repository.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
@@ -51,7 +52,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
-      await ref.read(authRepoProvider).signUp(
+      final outcome = await ref.read(authRepoProvider).signUp(
             email: _email.text,
             password: _password.text,
             fullName: _fullName.text,
@@ -66,15 +67,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
       if (!mounted) return;
 
-      if (_role == 'STUDENT') {
-        // Students are ACTIVE immediately, and signUp already left us with a
-        // session, so the router will move to the feed on its own.
-        showMessage(context, 'Welcome to RTC Hub.');
-      } else {
-        showMessage(
-          context,
-          'Registration submitted. An administrator will review your account.',
-        );
+      switch (outcome) {
+        case SignUpOutcome.alreadyRegistered:
+          showMessage(
+            context,
+            'That address already has an account. Try signing in instead.',
+          );
+
+        case SignUpOutcome.confirmEmail:
+          // No session, so the router will not move on its own. Say what has
+          // to happen next rather than leaving the user on a form that looks
+          // like it failed.
+          await showDialog<void>(
+            context: context,
+            builder: (dialogContext) => _ConfirmEmailDialog(
+              email: _email.text.trim().toLowerCase(),
+              onResend: () =>
+                  ref.read(authRepoProvider).resendConfirmation(_email.text),
+            ),
+          );
+          if (mounted) context.go('/login');
+
+        case SignUpOutcome.signedIn:
+          // A session exists, so the redirect takes it from here.
+          showMessage(
+            context,
+            _role == 'STUDENT'
+                ? 'Welcome to RTC Hub.'
+                : 'Registration submitted. An administrator will review your '
+                    'account.',
+          );
       }
     } catch (error) {
       if (mounted) showError(context, error);
@@ -317,6 +339,73 @@ class _Notice extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Shown when the project requires email confirmation.
+///
+/// The address is repeated back because the most common reason a
+/// confirmation never arrives is a typo in the field the user can no longer
+/// see.
+class _ConfirmEmailDialog extends StatefulWidget {
+  const _ConfirmEmailDialog({required this.email, required this.onResend});
+
+  final String email;
+  final Future<void> Function() onResend;
+
+  @override
+  State<_ConfirmEmailDialog> createState() => _ConfirmEmailDialogState();
+}
+
+class _ConfirmEmailDialogState extends State<_ConfirmEmailDialog> {
+  bool _resent = false;
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      icon: const Icon(Icons.mark_email_unread_outlined, size: 32),
+      title: const Text('Confirm your email'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Your account exists, but you need to confirm it before you can '
+            'sign in. We sent a link to:',
+            textAlign: TextAlign.center,
+            style: const TextStyle(height: 1.45),
+          ),
+          const SizedBox(height: 10),
+          SelectableText(
+            widget.email,
+            textAlign: TextAlign.center,
+            style: monoStyle(size: 13, weight: FontWeight.w700),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _resent || _busy
+              ? null
+              : () async {
+                  setState(() => _busy = true);
+                  try {
+                    await widget.onResend();
+                    if (mounted) setState(() => _resent = true);
+                  } catch (error) {
+                    if (context.mounted) showError(context, error);
+                  } finally {
+                    if (mounted) setState(() => _busy = false);
+                  }
+                },
+          child: Text(_resent ? 'Sent again' : 'Resend'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Got it'),
+        ),
+      ],
     );
   }
 }

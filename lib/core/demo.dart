@@ -719,7 +719,7 @@ class DemoAuthRepository extends AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({
+  Future<SignUpOutcome> signUp({
     required String email,
     required String password,
     required String fullName,
@@ -731,7 +731,7 @@ class DemoAuthRepository extends AuthRepository {
     String? companyName,
     String? industry,
     List<String>? contentInterests,
-  }) async {}
+  }) async => SignUpOutcome.signedIn;
 
   @override
   Future<void> signOut() async {}
