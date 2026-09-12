@@ -62,7 +62,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       await ref.read(messageRepoProvider).send(widget.otherId, text);
       _input.clear();
-      ref.invalidate(conversationsProvider);
+      // The thread stream only appends what Realtime delivers, so if the
+      // channel is down — or `messages` was never added to the publication —
+      // the sender watched their own message vanish. Re-reading the thread
+      // costs one query and makes the failure invisible instead of alarming.
+      ref
+        ..invalidate(conversationsProvider)
+        ..invalidate(threadProvider(widget.otherId));
     } catch (error) {
       if (mounted) showError(context, error);
     } finally {

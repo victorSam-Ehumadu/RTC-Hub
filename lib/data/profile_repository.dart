@@ -32,21 +32,20 @@ class ProfileRepository {
   /// — `profiles_select` enforces that, so no extra filtering is needed here.
   Future<List<Profile>> search(String term, {String? role, int limit = 30}) async {
     final clean = term.trim();
-    var query = db.from('profiles').select().neq('id', requireUserId);
 
-    if (clean.isNotEmpty) {
-      query = query.or(
-        'full_name.ilike.%$clean%,'
-        'course.ilike.%$clean%,'
-        'company_name.ilike.%$clean%,'
-        'bio.ilike.%$clean%',
-      );
-      unawaited(_logSkillSearch(clean));
-    }
-    if (role != null) query = query.eq('role', role);
+    // Goes through an RPC rather than building a PostgREST `.or()` string:
+    // interpolating the raw term into that string let a comma or a bracket
+    // break out of the intended clause and add filters of its own. RLS bounds
+    // what can come back either way, so it was never privilege escalation —
+    // but it was a crash, and matching in SQL costs nothing.
+    if (clean.isNotEmpty) unawaited(_logSkillSearch(clean));
 
-    final rows = await query.order('profile_completeness', ascending: false).limit(limit);
-    return rows.map(Profile.fromMap).toList();
+    final rows = await db.rpc('search_profiles', params: {
+      'p_term': clean,
+      'p_role': role,
+      'p_limit': limit,
+    }) as List;
+    return rows.cast<Map<String, dynamic>>().map(Profile.fromMap).toList();
   }
 
   /// Feeds the student dashboard's "most-searched skills" chart. Fire-and-
@@ -151,8 +150,19 @@ class ProfileRepository {
 
   // ─── Leaderboard ───────────────────────────────────────────
 
+  /// Top contributors.
+  ///
+  /// Reads `leaderboard_rows()` rather than the `leaderboard` view: the view
+  /// runs with its owner's rights and so listed people who had hidden their
+  /// profile. The function applies the same visibility and faculty rules the
+  /// profiles policy does — see migration 0010, which also explains why
+  /// `security_invoker` on the view would have produced a board of zeroes.
   Future<List<LeaderboardEntry>> leaderboard({int limit = 25}) async {
-    final rows = await db.from('leaderboard').select().limit(limit);
-    return rows.map(LeaderboardEntry.fromMap).toList();
+    final rows =
+        await db.rpc('leaderboard_rows', params: {'p_limit': limit}) as List;
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map(LeaderboardEntry.fromMap)
+        .toList();
   }
 }

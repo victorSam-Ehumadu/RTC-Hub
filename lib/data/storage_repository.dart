@@ -24,6 +24,12 @@ class StorageRepository {
 
   /// Uploads [file] and returns a URL usable by the app: a public URL for the
   /// open buckets, a time-limited signed URL for the private ones.
+  ///
+  /// **Do not persist the result for a private bucket.** The signed URL
+  /// expires in a week, and `profiles.cv_url` used to store one — so a
+  /// recruiter opening an application eight days later got a 400. Use
+  /// [uploadAndKeepPath] for anything written to a column, and sign it on
+  /// read with [signedUrlFor].
   Future<String> upload(File file, {required String bucket}) async {
     final uid = requireUserId;
     final name = '${DateTime.now().millisecondsSinceEpoch}${p.extension(file.path)}';
@@ -46,6 +52,26 @@ class StorageRepository {
 
   Future<String> uploadSubmission(File file) =>
       upload(file, bucket: submissions);
+
+  /// Uploads and returns the storage *path*, which does not expire.
+  ///
+  /// This is what belongs in a database column. A CV uploaded in March and
+  /// read in April has to still resolve, and a signed URL will not.
+  Future<String> uploadAndKeepPath(File file, {required String bucket}) async {
+    final uid = requireUserId;
+    final name =
+        '${DateTime.now().millisecondsSinceEpoch}${p.extension(file.path)}';
+    final path = '$uid/$name';
+    await db.storage.from(bucket).upload(path, file);
+    return path;
+  }
+
+  /// Mints a fresh signed URL for a stored path. Short-lived on purpose:
+  /// it is generated at the moment of use, so there is no reason for it to
+  /// outlive the screen that asked for it.
+  Future<String> signedUrlFor(String bucket, String path,
+          {Duration validFor = const Duration(hours: 2)}) =>
+      db.storage.from(bucket).createSignedUrl(path, validFor.inSeconds);
 
   /// Re-signs a private URL that has expired.
   Future<String> refreshSignedUrl(String bucket, String path) =>

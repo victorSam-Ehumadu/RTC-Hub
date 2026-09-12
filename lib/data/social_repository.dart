@@ -160,8 +160,13 @@ class MessageRepository {
   /// subscribes to the table and RLS does the filtering; callers narrow to a
   /// single thread with [Message.inThread].
   RealtimeChannel subscribe(void Function(Message) onMessage) {
+    // The `$` here was escaped, so every client joined the literal topic
+    // "messages:$requireUserId" and shared one channel. RLS still filtered
+    // delivery, so nothing leaked — but a shared topic is not what the code
+    // claimed, and it made per-user debugging impossible.
+    final me = requireUserId;
     return db
-        .channel('messages:\$requireUserId')
+        .channel('messages:$me')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',

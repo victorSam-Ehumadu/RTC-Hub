@@ -78,30 +78,23 @@ class AdminRepository {
       });
 
   /// Headline counts for the admin dashboard.
+  ///
+  /// One RPC rather than six queries whose row counts were taken in Dart.
+  /// PostgREST caps a result set at 1000, so the old version reported
+  /// "1000 users" forever once the project passed that — a dashboard that
+  /// lies quietly is worse than one that errors.
   Future<AdminStats> stats() async {
-    final results = await Future.wait<dynamic>([
-      _count('profiles'),
-      _count('profiles', column: 'status', value: 'PENDING'),
-      _count('posts'),
-      _count('posts', column: 'is_bounty', value: true),
-      _count('opportunities', column: 'status', value: 'PENDING'),
-      _count('content_flags', column: 'resolved', value: false),
-    ]);
-    return AdminStats(
-      totalUsers: results[0],
-      pendingUsers: results[1],
-      totalPosts: results[2],
-      bounties: results[3],
-      pendingOpportunities: results[4],
-      openFlags: results[5],
-    );
-  }
+    final row = await db.rpc('admin_stats') as Map<String, dynamic>;
+    int at(String key) => (row[key] as num?)?.toInt() ?? 0;
 
-  Future<int> _count(String table, {String? column, Object? value}) async {
-    var query = db.from(table).select('id');
-    if (column != null) query = query.eq(column, value!);
-    final rows = await query;
-    return rows.length;
+    return AdminStats(
+      totalUsers: at('total_users'),
+      pendingUsers: at('pending_users'),
+      totalPosts: at('total_posts'),
+      bounties: at('bounties'),
+      pendingOpportunities: at('pending_opportunities'),
+      openFlags: at('open_flags'),
+    );
   }
 }
 
