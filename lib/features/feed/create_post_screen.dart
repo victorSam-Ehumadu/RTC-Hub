@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
+import '../../models/sheet.dart';
 import '../../widgets/common.dart';
+import '../../widgets/sheet_preview.dart';
 
 /// Composer for a normal post or a bounty.
 ///
@@ -29,6 +33,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   late bool _isBounty = widget.asBounty;
   bool _attachCode = false;
   String _language = 'dart';
+  SheetDoc? _sheet;
   bool _busy = false;
 
   @override
@@ -37,6 +42,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     _code.dispose();
     _module.dispose();
     super.dispose();
+  }
+
+  /// Attaches a spreadsheet the author built in Excel or Sheets.
+  ///
+  /// There is no in-app grid editor on purpose: Excel already is one, it
+  /// recalculates formulas, and every Business student has it. The app's job
+  /// is to carry the file and preview it, not to reimplement it.
+  Future<void> _importSheet() async {
+    try {
+      final docs = ref.read(documentServiceProvider);
+      final picked = await docs.pickAttachment(extensions: ['xlsx', 'csv']);
+      if (picked?.path == null || !mounted) return;
+
+      final doc = await docs.readSheet(File(picked!.path!));
+      if (!mounted) return;
+      setState(() => _sheet = doc);
+    } catch (error) {
+      if (mounted) showError(context, error);
+    }
   }
 
   Future<void> _submit() async {
@@ -59,6 +83,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             bountyModule: _isBounty && _module.text.trim().isNotEmpty
                 ? _module.text.trim()
                 : null,
+            sheetData: _sheet?.toMap(),
+            sheetName: _sheet?.name,
           );
 
       ref.invalidate(feedProvider);
@@ -174,6 +200,37 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   hintText: 'Paste your code here',
                   alignLabelWithHint: true,
                 ),
+              ),
+            ],
+
+            const SectionHeader(title: 'Spreadsheet'),
+            if (_sheet == null)
+              OutlinedButton.icon(
+                onPressed: _importSheet,
+                icon: const Icon(Icons.upload_file, size: 17),
+                label: const Text('Attach a .xlsx or .csv'),
+              )
+            else ...[
+              SheetPreview(
+                sheet: _sheet!,
+                title: _content.text.trim().isEmpty
+                    ? 'sheet'
+                    : _content.text.trim(),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _importSheet,
+                    icon: const Icon(Icons.swap_horiz, size: 16),
+                    label: const Text('Replace'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => setState(() => _sheet = null),
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Remove'),
+                  ),
+                ],
               ),
             ],
           ],

@@ -17,6 +17,11 @@ class StorageRepository {
   static const documents = 'documents';
   static const verification = 'verification';
 
+  /// Bounty answers. Private: readable by anyone who can read the
+  /// bounty, which routes through posts_select and so inherits the
+  /// faculty scoping from migration 0007.
+  static const submissions = 'submissions';
+
   /// Uploads [file] and returns a URL usable by the app: a public URL for the
   /// open buckets, a time-limited signed URL for the private ones.
   Future<String> upload(File file, {required String bucket}) async {
@@ -38,6 +43,9 @@ class StorageRepository {
   Future<String> uploadCv(File file) => upload(file, bucket: documents);
   Future<String> uploadVerification(File file) =>
       upload(file, bucket: verification);
+
+  Future<String> uploadSubmission(File file) =>
+      upload(file, bucket: submissions);
 
   /// Re-signs a private URL that has expired.
   Future<String> refreshSignedUrl(String bucket, String path) =>

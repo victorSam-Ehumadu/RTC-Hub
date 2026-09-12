@@ -187,14 +187,27 @@ class NotificationRepository {
     return rows.map(AppNotification.fromMap).toList();
   }
 
+  /// Unread badge count.
+  ///
+  /// Counted in the database rather than by selecting rows and taking the
+  /// length: PostgREST caps a result set at 1000, so the old version showed a
+  /// badge that silently stopped counting on a busy account.
   Future<int> unreadCount() async {
-    final rows = await db
-        .from('notifications')
-        .select('id')
-        .eq('user_id', requireUserId)
-        .eq('read', false);
-    return rows.length;
+    final total = await db.rpc('unread_notification_count');
+    return (total as num?)?.toInt() ?? 0;
   }
+
+  /// Clears the NEW_MESSAGE notifications for one conversation.
+  ///
+  /// Runs as an RPC because matching on `data->>'sender_id'` from the client
+  /// would need a policy letting a user update rows by someone else's id.
+  Future<void> markThreadNotificationsRead(String otherId) =>
+      db.rpc('mark_thread_notifications_read', params: {'p_other': otherId});
+
+  /// Clears the notifications that pointed at one post — reactions, comments
+  /// and answers — when the thread is opened.
+  Future<void> markPostNotificationsRead(String postId) =>
+      db.rpc('mark_post_notifications_read', params: {'p_post': postId});
 
   Future<void> markRead(String id) =>
       db.from('notifications').update({'read': true}).eq('id', id);

@@ -1177,6 +1177,31 @@ class DemoNotificationRepository extends NotificationRepository {
     _ping();
   }
 
+  /// These are RPCs against the live database, so without an override demo
+  /// mode would throw on every chat open. Both call sites swallow the error,
+  /// but the badge would then never come down — which is the behaviour the
+  /// migration set out to fix, so demo should show it working.
+  @override
+  Future<void> markThreadNotificationsRead(String otherId) async {
+    _readWhere((n) => n.type == 'NEW_MESSAGE' && n.senderId == otherId);
+  }
+
+  @override
+  Future<void> markPostNotificationsRead(String postId) async {
+    _readWhere((n) => n.postId == postId);
+  }
+
+  void _readWhere(bool Function(AppNotification) match) {
+    var touched = false;
+    for (var i = 0; i < demoNotifications.length; i++) {
+      final n = demoNotifications[i];
+      if (n.read || !match(n)) continue;
+      demoNotifications[i] = _asRead(n);
+      touched = true;
+    }
+    if (touched) _ping();
+  }
+
   AppNotification _asRead(AppNotification n) => AppNotification(
         id: n.id,
         type: n.type,

@@ -32,7 +32,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     Future.microtask(() async {
       try {
         await ref.read(messageRepoProvider).markThreadRead(widget.otherId);
-        ref.invalidate(conversationsProvider);
+        // The matching NEW_MESSAGE notifications too, or the bell keeps
+        // climbing even though the messages have been read.
+        await ref
+            .read(notificationRepoProvider)
+            .markThreadNotificationsRead(widget.otherId);
+        ref
+          ..invalidate(conversationsProvider)
+          ..invalidate(unreadCountProvider)
+          ..invalidate(notificationsProvider);
       } catch (_) {
         // Not worth interrupting the conversation over.
       }

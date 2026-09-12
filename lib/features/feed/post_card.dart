@@ -8,6 +8,7 @@ import '../../models/post.dart';
 import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
+import '../../widgets/sheet_preview.dart';
 
 /// One post in a feed or bounty list.
 ///
@@ -132,6 +133,15 @@ class _PostCardState extends ConsumerState<PostCard> {
                   language: _post.codeLanguage,
                   maxLines: 12,
                   runnable: false,
+                ),
+              ],
+
+              if (_post.hasSheet) ...[
+                const SizedBox(height: 12),
+                SheetPreview(
+                  sheet: _post.sheet!,
+                  title: 'sheet',
+                  maxRows: 4,
                 ),
               ],
 

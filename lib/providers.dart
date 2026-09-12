@@ -217,11 +217,16 @@ final unreadCountProvider = StreamProvider<int>((ref) async* {
   }
   final repo = ref.watch(notificationRepoProvider);
 
-  var count = await repo.unreadCount();
-  yield count;
+  yield await repo.unreadCount();
 
   final controller = StreamController<int>();
-  final channel = repo.subscribe((_) => controller.add(++count));
+  // Re-count rather than incrementing a local tally: marking notifications
+  // read elsewhere in the app has to be able to take the badge *down*, and a
+  // counter that only ever goes up cannot.
+  final channel = repo.subscribe((_) async {
+    if (controller.isClosed) return;
+    controller.add(await repo.unreadCount());
+  });
 
   ref.onDispose(() {
     db.removeChannel(channel);
