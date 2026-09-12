@@ -47,11 +47,14 @@ dependencies:
   # Theme choice is a device preference, not an account fact.
   shared_preferences: ^2.3.2
   # Piston, for running snippets attached to posts. The only
-  # non-Supabase service the app talks to.
+  # non-Supabase service the app talks to. Also used by AiRepository.
   http: ^1.2.2
   # Spreadsheet round-trip: build a real .xlsx so Excel and Sheets open and
   # recalculate it, rather than shipping our own formula engine.
   excel: ^4.0.6
+  # 12.x, not the 8.x stream A pinned: 12 replaced FilePicker.platform with
+  # static methods, and downgrading would break the submission composer.
+  # cv_skills_screen.dart is migrated to the new API in the same commit.
   file_picker: ^12.3.0
   open_filex: ^4.7.0
   share_plus: ^13.3.0

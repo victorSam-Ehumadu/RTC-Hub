@@ -9,6 +9,10 @@ class Env {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
+  /// Stream A (AI assistant). Called directly from the client — see the
+  /// doc comment on `AiRepository` for why, and the trade-off that implies.
+  static const geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 

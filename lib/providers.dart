@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/supabase.dart';
 import 'data/admin_repository.dart';
+import 'data/ai_repository.dart';
 import 'data/code_runner.dart';
 import 'data/document_service.dart';
 import 'data/engagement_repository.dart';
@@ -14,6 +15,7 @@ import 'data/post_repository.dart';
 import 'data/profile_repository.dart';
 import 'data/social_repository.dart';
 import 'data/storage_repository.dart';
+import 'models/assistant.dart';
 import 'models/opportunity.dart';
 import 'models/post.dart';
 import 'models/profile.dart';
@@ -33,6 +35,7 @@ final eventRepoProvider = Provider((_) => const EventRepository());
 final adminRepoProvider = Provider((_) => const AdminRepository());
 final analyticsRepoProvider = Provider((_) => const AnalyticsRepository());
 final storageRepoProvider = Provider((_) => const StorageRepository());
+final aiRepoProvider = Provider((_) => const AiRepository());
 final engagementRepoProvider =
     Provider((_) => const EngagementRepository());
 
@@ -72,6 +75,14 @@ final myProfileProvider = FutureProvider<Profile?>((ref) async {
 /// Convenience for widgets that only run inside the authenticated shell.
 final meProvider = Provider<Profile?>((ref) {
   return ref.watch(myProfileProvider).valueOrNull;
+});
+
+/// Whether this user has been through the first-run tutorial yet.
+/// `AppShell` watches this the same way it watches `myProfileProvider` — an
+/// async read that a synchronous router `redirect` cannot do.
+final onboardingProgressProvider =
+    FutureProvider.autoDispose<OnboardingProgress>((ref) {
+  return ref.watch(aiRepoProvider).onboardingProgress();
 });
 
 // ─── Feed and bounties ────────────────────────────────────────
