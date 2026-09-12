@@ -147,14 +147,18 @@ class _Wordmark extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 62,
-          height: 62,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
             color: AppColors.accent.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
           ),
-          child: const Icon(Icons.terminal, size: 32, color: AppColors.accent),
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset(
+            'assets/images/Richfield-Logo-square.jpg',
+            fit: BoxFit.cover,
+          ),
         ),
         const SizedBox(height: 18),
         Text(

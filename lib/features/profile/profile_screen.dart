@@ -7,6 +7,7 @@ import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../feed/post_card.dart';
+import '../shell/app_shell.dart';
 
 /// Someone's profile — theirs or your own.
 ///
@@ -42,7 +43,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSelf ? 'Your profile' : 'Profile'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: const HubBanner(),
+        iconTheme: const IconThemeData(color: hubBannerForeground),
+        actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+        title: Text(
+          isSelf ? 'Your profile' : 'Profile',
+          style: const TextStyle(
+            color: hubBannerForeground,
+            fontWeight: FontWeight.w800,
+            shadows: hubBannerTitleShadow,
+          ),
+        ),
         actions: [
           if (isSelf) ...[
             if (me?.isAdmin ?? false)
@@ -379,6 +392,18 @@ class _SkillsSection extends ConsumerWidget {
 
   Future<void> _addSkill(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
+
+    // Popping the dialog synchronously from a callback on the autofocused
+    // TextField (Enter key, or a button tapped while it still has focus)
+    // races the field's own focus/keyboard teardown and can trip Flutter's
+    // '_dependents.isEmpty' assertion. Deferring to the next frame lets that
+    // teardown finish before the dialog route is torn down.
+    void close(BuildContext dialogContext, [String? value]) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
+      });
+    }
+
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -387,15 +412,15 @@ class _SkillsSection extends ConsumerWidget {
           controller: controller,
           autofocus: true,
           decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
-          onSubmitted: (v) => Navigator.pop(dialogContext, v),
+          onSubmitted: (v) => close(dialogContext, v),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => close(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            onPressed: () => close(dialogContext, controller.text),
             child: const Text('Add'),
           ),
         ],
