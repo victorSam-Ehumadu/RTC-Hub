@@ -131,6 +131,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                   code: _post.codeSnippet!,
                   language: _post.codeLanguage,
                   maxLines: 12,
+                  runnable: false,
                 ),
               ],
 

@@ -46,6 +46,9 @@ dependencies:
   path: ^1.9.1
   # Theme choice is a device preference, not an account fact.
   shared_preferences: ^2.3.2
+  # Piston, for running snippets attached to posts. The only
+  # non-Supabase service the app talks to.
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

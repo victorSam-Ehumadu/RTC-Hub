@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/supabase.dart';
 import 'data/admin_repository.dart';
+import 'data/code_runner.dart';
 import 'data/auth_repository.dart';
 import 'data/opportunity_repository.dart';
 import 'data/post_repository.dart';
@@ -29,6 +30,10 @@ final eventRepoProvider = Provider((_) => const EventRepository());
 final adminRepoProvider = Provider((_) => const AdminRepository());
 final analyticsRepoProvider = Provider((_) => const AnalyticsRepository());
 final storageRepoProvider = Provider((_) => const StorageRepository());
+
+/// Sandboxed execution for snippets. Not a Supabase repository — see
+/// `data/code_runner.dart` for why it is a separate service.
+final codeRunnerProvider = Provider((_) => const CodeRunner());
 
 // ─── Session and profile ──────────────────────────────────────
 
