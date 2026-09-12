@@ -342,6 +342,12 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         ...?actions,
         IconButton(
+          tooltip: 'Search',
+          onPressed: () => context.push('/search'),
+          icon: const Icon(Icons.search),
+        ),
+        IconButton(
+          tooltip: 'Notifications',
           onPressed: () => context.push('/notifications'),
           icon: Stack(
             clipBehavior: Clip.none,

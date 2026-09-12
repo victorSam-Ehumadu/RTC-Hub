@@ -27,6 +27,13 @@ class Profile {
     this.visibilityBusiness = true,
     this.visibilityPeers = true,
     this.contentInterests = const [],
+    this.headline,
+    this.websiteUrl,
+    this.contactEmail,
+    this.contactPhone,
+    this.companySize,
+    this.foundedYear,
+    this.sectionVisibility = const {},
     this.createdAt,
   });
 
@@ -57,6 +64,23 @@ class Profile {
   /// by `trg_profiles_interests` — see migration 0007.
   final List<String> contentInterests;
 
+  /// One line under the name — "3rd year BSc IT, looking for an
+  /// internship". Every role has one, not just businesses.
+  final String? headline;
+
+  // §2.3 company profile.
+  final String? websiteUrl;
+  final String? contactEmail;
+  final String? contactPhone;
+  final String? companySize;
+  final int? foundedYear;
+
+  /// Per-section overrides, e.g. `{'cv': false}`. An absent key means
+  /// visible. Enforced by `profile_for_viewer()` in migration 0011 — a
+  /// hidden section is absent from the JSON, not merely unrendered, so
+  /// this map is only ever populated for your own profile.
+  final Map<String, bool> sectionVisibility;
+
   final DateTime? createdAt;
 
   bool get isStudent => role == 'STUDENT';
@@ -65,6 +89,10 @@ class Profile {
   bool get isAdmin => role == 'ADMIN';
   bool get isActive => status == 'ACTIVE';
   bool get isPending => status == 'PENDING';
+
+  /// Whether a section survived `profile_for_viewer()`. Used by the UI to
+  /// decide between rendering a section and omitting it entirely.
+  bool showsSection(String key) => sectionVisibility[key] ?? true;
 
   bool get isIt => faculty == 'IT';
   bool get isBusinessFaculty => faculty == 'BUSINESS';
@@ -122,6 +150,18 @@ class Profile {
         contentInterests: map['content_interests'] is List
             ? (map['content_interests'] as List).cast<String>()
             : const [],
+        headline: map['headline'] as String?,
+        websiteUrl: map['website_url'] as String?,
+        contactEmail: map['contact_email'] as String?,
+        contactPhone: map['contact_phone'] as String?,
+        companySize: map['company_size'] as String?,
+        foundedYear: map['founded_year'] as int?,
+        sectionVisibility: map['section_visibility'] is Map
+            ? {
+                for (final e in (map['section_visibility'] as Map).entries)
+                  '${e.key}': e.value == true,
+              }
+            : const {},
         createdAt: DateTime.tryParse((map['created_at'] ?? '') as String),
       );
 
@@ -146,6 +186,13 @@ class Profile {
         // trigger overwrites it for students and alumni, so sending it is
         // harmless there.
         'content_interests': contentInterests.isEmpty ? null : contentInterests,
+        'headline': headline,
+        'website_url': websiteUrl,
+        'contact_email': contactEmail,
+        'contact_phone': contactPhone,
+        'company_size': companySize,
+        'founded_year': foundedYear,
+        'section_visibility': sectionVisibility,
       };
 
   Profile copyWith({
@@ -165,6 +212,13 @@ class Profile {
     bool? visibilityBusiness,
     bool? visibilityPeers,
     List<String>? contentInterests,
+    String? headline,
+    String? websiteUrl,
+    String? contactEmail,
+    String? contactPhone,
+    String? companySize,
+    int? foundedYear,
+    Map<String, bool>? sectionVisibility,
   }) =>
       Profile(
         id: id,
@@ -189,6 +243,13 @@ class Profile {
         visibilityBusiness: visibilityBusiness ?? this.visibilityBusiness,
         visibilityPeers: visibilityPeers ?? this.visibilityPeers,
         contentInterests: contentInterests ?? this.contentInterests,
+        headline: headline ?? this.headline,
+        websiteUrl: websiteUrl ?? this.websiteUrl,
+        contactEmail: contactEmail ?? this.contactEmail,
+        contactPhone: contactPhone ?? this.contactPhone,
+        companySize: companySize ?? this.companySize,
+        foundedYear: foundedYear ?? this.foundedYear,
+        sectionVisibility: sectionVisibility ?? this.sectionVisibility,
         createdAt: createdAt,
       );
 }

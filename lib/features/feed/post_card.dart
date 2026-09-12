@@ -173,6 +173,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                     style: TextStyle(fontSize: 13, color: muted),
                   ),
                   const Spacer(),
+                  _SaveButton(postId: _post.id),
                   if (_post.isOpenBounty)
                     TextButton(
                       onPressed: () => context.push('/post/${_post.id}'),
@@ -259,6 +260,60 @@ class _ReactionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Bookmark toggle.
+///
+/// Reads the saved-id set rather than asking per card: the alternative is a
+/// round-trip for every row, which on a twenty-post feed is twenty requests
+/// to draw an icon. Optimistic like the reaction button, and for the same
+/// reason — a bookmark that waits on the network feels broken.
+class _SaveButton extends ConsumerStatefulWidget {
+  const _SaveButton({required this.postId});
+
+  final String postId;
+
+  @override
+  ConsumerState<_SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends ConsumerState<_SaveButton> {
+  bool? _override;
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = ref.watch(savedIdsProvider).valueOrNull ?? const <String>{};
+    final isSaved = _override ?? saved.contains(widget.postId);
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.6);
+
+    return IconButton(
+      tooltip: isSaved ? 'Remove from saved' : 'Save',
+      visualDensity: VisualDensity.compact,
+      iconSize: 18,
+      icon: Icon(
+        isSaved ? Icons.bookmark : Icons.bookmark_border,
+        color: isSaved ? AppColors.points : muted,
+      ),
+      onPressed: () async {
+        setState(() => _override = !isSaved);
+        try {
+          final repo = ref.read(engagementRepoProvider);
+          if (isSaved) {
+            await repo.unsavePost(widget.postId);
+          } else {
+            await repo.savePost(widget.postId);
+          }
+          ref.invalidate(savedIdsProvider);
+        } catch (error) {
+          if (!context.mounted) return;
+          setState(() => _override = isSaved);
+          showError(context, error);
+        }
+      },
     );
   }
 }

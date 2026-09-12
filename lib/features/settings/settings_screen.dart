@@ -63,6 +63,13 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
+                    leading: const Icon(Icons.bookmark_border),
+                    title: const Text('Saved items'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/saved'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
                     leading: const Icon(Icons.person_outline),
                     title: const Text('Edit profile'),
                     trailing: const Icon(Icons.chevron_right),

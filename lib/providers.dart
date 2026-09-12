@@ -7,6 +7,7 @@ import 'core/supabase.dart';
 import 'data/admin_repository.dart';
 import 'data/code_runner.dart';
 import 'data/document_service.dart';
+import 'data/engagement_repository.dart';
 import 'data/auth_repository.dart';
 import 'data/opportunity_repository.dart';
 import 'data/post_repository.dart';
@@ -16,6 +17,7 @@ import 'data/storage_repository.dart';
 import 'models/opportunity.dart';
 import 'models/post.dart';
 import 'models/profile.dart';
+import 'models/recommendation.dart';
 import 'models/social.dart';
 
 // ─── Repositories ─────────────────────────────────────────────
@@ -31,6 +33,8 @@ final eventRepoProvider = Provider((_) => const EventRepository());
 final adminRepoProvider = Provider((_) => const AdminRepository());
 final analyticsRepoProvider = Provider((_) => const AnalyticsRepository());
 final storageRepoProvider = Provider((_) => const StorageRepository());
+final engagementRepoProvider =
+    Provider((_) => const EngagementRepository());
 
 /// Sandboxed execution for snippets. Not a Supabase repository — see
 /// `data/code_runner.dart` for why it is a separate service.
@@ -296,4 +300,64 @@ final studentStatsProvider =
 /// Platform-wide, not per-user — no `.family` needed.
 final wantedSkillsProvider = FutureProvider.autoDispose<List<SkillCount>>((ref) {
   return ref.watch(analyticsRepoProvider).wantedSkills();
+});
+
+// ─── Recommendations, saves, search (§2.3 + basics) ───────────
+
+final recommendationsProvider = FutureProvider.autoDispose
+    .family<List<Recommendation>, String>((ref, userId) {
+  return ref.watch(engagementRepoProvider).forSubject(userId);
+});
+
+/// Recommendations waiting on the signed-in user to approve. Drives the
+/// badge on the profile's own recommendations section.
+final pendingRecommendationsProvider =
+    FutureProvider.autoDispose<List<Recommendation>>((ref) {
+  return ref.watch(engagementRepoProvider).pendingForMe();
+});
+
+final writtenRecommendationsProvider =
+    FutureProvider.autoDispose<List<Recommendation>>((ref) {
+  return ref.watch(engagementRepoProvider).written();
+});
+
+final savedIdsProvider = FutureProvider.autoDispose<Set<String>>((ref) {
+  return ref.watch(engagementRepoProvider).savedIds();
+});
+
+final savedPostsProvider = FutureProvider.autoDispose<List<Post>>((ref) {
+  return ref.watch(engagementRepoProvider).savedPosts();
+});
+
+final savedOpportunitiesProvider =
+    FutureProvider.autoDispose<List<Opportunity>>((ref) {
+  return ref.watch(engagementRepoProvider).savedOpportunities();
+});
+
+/// The current search term. A provider rather than widget state so the
+/// results provider can key off it and debounce naturally through Riverpod's
+/// own rebuild coalescing.
+final searchTermProvider = StateProvider.autoDispose<String>((_) => '');
+
+final searchResultsProvider =
+    FutureProvider.autoDispose<List<SearchHit>>((ref) async {
+  final term = ref.watch(searchTermProvider).trim();
+  if (term.length < 2) return const [];
+
+  // Let a fast typist finish the word before we ask the database.
+  await Future<void>.delayed(const Duration(milliseconds: 250));
+  return ref.watch(engagementRepoProvider).search(term);
+});
+
+final suggestedConnectionsProvider =
+    FutureProvider.autoDispose<List<ConnectionSuggestion>>((ref) {
+  return ref.watch(engagementRepoProvider).suggestions();
+});
+
+/// Someone else's profile with hidden sections already stripped server-side.
+/// Use this rather than [profileProvider] for anyone who is not the signed-in
+/// user — see `profile_for_viewer()` in migration 0011.
+final viewedProfileProvider =
+    FutureProvider.autoDispose.family<Profile?, String>((ref, userId) {
+  return ref.watch(engagementRepoProvider).profileForViewer(userId);
 });
