@@ -1,8 +1,8 @@
-gradle-wrapper.jar
+# The Gradle wrapper is committed on purpose: it pins the Gradle version
+# and keeps a fresh clone buildable without relying on the Flutter SDK
+# cache to restore it.
 /.gradle
 /captures/
-/gradlew
-/gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/

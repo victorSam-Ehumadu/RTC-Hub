@@ -55,7 +55,6 @@ build/
 env.json
 
 # Android
-**/android/**/gradle-wrapper.jar
 **/android/.gradle
 **/android/captures/
 **/android/local.properties
