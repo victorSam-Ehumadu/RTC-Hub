@@ -137,6 +137,34 @@ class PostRepository {
     return Post.fromMap(row);
   }
 
+  /// Edits the parts of a post an author owns.
+  ///
+  /// Deliberately narrow: `is_bounty`, `bounty_points` and `faculty` are not
+  /// here. trg_posts_guard reverts them anyway, but sending them would
+  /// suggest they are editable — and turning a solved bounty back into a
+  /// post, or a Business post into an IT one after people have read it, are
+  /// not edits. They are rewrites of something other people already acted on.
+  Future<Post> edit(
+    String postId, {
+    required String content,
+    String? codeLanguage,
+    String? codeSnippet,
+    Map<String, dynamic>? sheetData,
+  }) async {
+    final row = await db
+        .from('posts')
+        .update({
+          'content': content.trim(),
+          'code_language': codeLanguage,
+          'code_snippet': codeSnippet,
+          'sheet_data': sheetData,
+        })
+        .eq('id', postId)
+        .select(_postSelect)
+        .single();
+    return Post.fromMap(row);
+  }
+
   Future<void> delete(String postId) =>
       db.from('posts').delete().eq('id', postId);
 

@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import 'recommendations_section.dart';
 import '../../widgets/skeleton.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
@@ -111,6 +112,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
               _SkillsSection(userId: p.id, isSelf: isSelf),
               _ExperienceSection(userId: p.id, isSelf: isSelf),
+              RecommendationsSection(
+                userId: p.id,
+                isSelf: isSelf,
+                subjectName: p.fullName.split(' ').first,
+              ),
               if (isSelf) _StatsSection(userId: p.id),
               _PostsSection(userId: p.id),
             ],

@@ -19,6 +19,17 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+  final _headline = TextEditingController();
+  final _website = TextEditingController();
+  final _contactEmail = TextEditingController();
+  final _contactPhone = TextEditingController();
+
+  /// Per-section overrides. Absent key means visible, matching what
+  /// `profile_for_viewer()` assumes — so a section added to the app
+  /// later is not silently hidden for everyone who saved settings
+  /// before it existed.
+  Map<String, bool> _sections = {};
+
   final _fullName = TextEditingController();
   final _bio = TextEditingController();
   final _company = TextEditingController();
@@ -39,6 +50,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   void dispose() {
+    _headline.dispose();
+    _website.dispose();
+    _contactEmail.dispose();
+    _contactPhone.dispose();
     _fullName.dispose();
     _bio.dispose();
     _company.dispose();
@@ -90,6 +105,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   _portfolio.text.trim().isEmpty ? null : _portfolio.text.trim(),
               visibilityBusiness: _visibleToBusiness,
               visibilityPeers: _visibleToPeers,
+              sectionVisibility: _sections,
+              headline: _headline.text.trim().isEmpty
+                  ? null
+                  : _headline.text.trim(),
+              websiteUrl:
+                  _website.text.trim().isEmpty ? null : _website.text.trim(),
+              contactEmail: _contactEmail.text.trim().isEmpty
+                  ? null
+                  : _contactEmail.text.trim(),
+              contactPhone: _contactPhone.text.trim().isEmpty
+                  ? null
+                  : _contactPhone.text.trim(),
             ),
           );
       ref.invalidate(myProfileProvider);
@@ -128,6 +155,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _avatarUrl = me.avatarUrl;
       _visibleToBusiness = me.visibilityBusiness;
       _visibleToPeers = me.visibilityPeers;
+      _sections = Map<String, bool>.from(me.sectionVisibility);
+      _headline.text = me.headline ?? '';
+      _website.text = me.websiteUrl ?? '';
+      _contactEmail.text = me.contactEmail ?? '';
+      _contactPhone.text = me.contactPhone ?? '';
     }
 
     return Scaffold(
@@ -266,6 +298,64 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ],
 
+          const SectionHeader(title: 'Headline'),
+          TextFormField(
+            controller: _headline,
+            textCapitalization: TextCapitalization.sentences,
+            maxLength: 90,
+            decoration: const InputDecoration(
+              hintText: '3rd year BSc IT, looking for an internship',
+              counterText: '',
+            ),
+          ),
+
+          const SectionHeader(title: 'Contact'),
+          TextFormField(
+            controller: _contactEmail,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Contact email'),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _contactPhone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Phone'),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _website,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Website',
+              hintText: 'https://',
+            ),
+          ),
+
+          const SectionHeader(title: 'What others can see'),
+          Text(
+            'Hidden sections are removed before your profile leaves the '
+            'server, so they are not simply hidden on someone else\'s screen.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color:
+                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final section in _kSections)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _sections[section.key] ?? true,
+              onChanged: (on) => setState(() => _sections[section.key] = on),
+              title: Text(section.label),
+              subtitle: Text(
+                section.hint,
+                style: const TextStyle(fontSize: 11.5),
+              ),
+              secondary: Icon(section.icon),
+            ),
+
           const SectionHeader(title: 'Who can see you'),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -288,3 +378,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 }
+
+/// The sections a user can hide, and what hiding one actually costs them.
+///
+/// The keys match what `profile_for_viewer()` strips in migration 0011 —
+/// change one and the other stops working, so they are listed together here
+/// rather than scattered through the widget tree.
+class _SectionToggle {
+  const _SectionToggle(this.key, this.label, this.hint, this.icon);
+
+  final String key;
+  final String label;
+  final String hint;
+  final IconData icon;
+}
+
+const _kSections = <_SectionToggle>[
+  _SectionToggle('contact', 'Contact details',
+      'Email and phone. Businesses use these to reach you.', Icons.mail_outline),
+  _SectionToggle('cv', 'CV',
+      'Hiding it means recruiters cannot open your CV.', Icons.description_outlined),
+  _SectionToggle('portfolio', 'Portfolio link', 'Your personal site or GitHub.',
+      Icons.link),
+  _SectionToggle('bio', 'About and headline', 'Your written introduction.',
+      Icons.notes_outlined),
+  _SectionToggle('studies', 'Course and year',
+      'Course, academic year and graduation year.', Icons.school_outlined),
+];

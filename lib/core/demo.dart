@@ -805,6 +805,45 @@ class DemoPostRepository extends PostRepository {
   }
 
   @override
+  Future<Post> edit(
+    String postId, {
+    required String content,
+    String? codeLanguage,
+    String? codeSnippet,
+    Map<String, dynamic>? sheetData,
+  }) async {
+    final i = demoPosts.indexWhere((p) => p.id == postId);
+    if (i < 0) throw StateError('Post not found');
+
+    final old = demoPosts[i];
+    final updated = Post(
+      id: old.id,
+      authorId: old.authorId,
+      author: old.author,
+      type: old.type,
+      content: content.trim(),
+      createdAt: old.createdAt,
+      codeLanguage: codeLanguage,
+      codeSnippet: codeSnippet,
+      videoUrl: old.videoUrl,
+      thumbnailUrl: old.thumbnailUrl,
+      isFlagged: old.isFlagged,
+      isBounty: old.isBounty,
+      bountyPoints: old.bountyPoints,
+      bountySolved: old.bountySolved,
+      bountyModule: old.bountyModule,
+      reactionCount: old.reactionCount,
+      commentCount: old.commentCount,
+      myReaction: old.myReaction,
+      faculty: old.faculty,
+      sheet: sheetData == null ? null : SheetDoc.fromMap(sheetData),
+    );
+    demoPosts[i] = updated;
+    _ping();
+    return updated;
+  }
+
+  @override
   Future<void> delete(String postId) async {
     demoPosts.removeWhere((p) => p.id == postId);
     _ping();

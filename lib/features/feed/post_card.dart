@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
 import '../../widgets/skeleton.dart';
+import 'edit_post_sheet.dart';
 import '../../widgets/sheet_preview.dart';
 
 /// One post in a feed or bounty list.
@@ -114,6 +115,12 @@ class _PostCardState extends ConsumerState<PostCard> {
                   // Faculty is what 0007 scopes the feed by, so showing it
                   // makes the rule legible instead of mysterious.
                   FacultyChip(faculty: _post.faculty, compact: true),
+                  if (ref.watch(meProvider)?.id == _post.authorId)
+                    _AuthorMenu(
+                      post: _post,
+                      onDeleted: widget.onChanged,
+                      onEdited: (updated) => setState(() => _post = updated),
+                    ),
                   if (_post.isBounty) ...[
                     const SizedBox(width: 6),
                     PointsChip(points: _post.bountyPoints),
@@ -312,6 +319,98 @@ class _SaveButtonState extends ConsumerState<_SaveButton> {
           if (!context.mounted) return;
           setState(() => _override = isSaved);
           showError(context, error);
+        }
+      },
+    );
+  }
+}
+
+/// Edit and delete, for the person who wrote it.
+///
+/// Behind an overflow menu rather than inline buttons: these are the two
+/// destructive-ish actions on the card and they should not compete with
+/// reacting and commenting, which is what the card is for.
+class _AuthorMenu extends ConsumerWidget {
+  const _AuthorMenu({
+    required this.post,
+    required this.onDeleted,
+    required this.onEdited,
+  });
+
+  final Post post;
+  final VoidCallback? onDeleted;
+  final ValueChanged<Post> onEdited;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      tooltip: 'Post options',
+      icon: Icon(
+        Icons.more_horiz,
+        size: 18,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'edit',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.edit_outlined, size: 18),
+            title: Text('Edit'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: AppColors.danger,
+            ),
+            title: Text('Delete', style: TextStyle(color: AppColors.danger)),
+          ),
+        ),
+      ],
+      onSelected: (choice) async {
+        if (choice == 'edit') {
+          final updated = await showEditPostSheet(context, post);
+          if (updated != null) onEdited(updated);
+          return;
+        }
+
+        final gone = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Delete this post?'),
+            content: Text(
+              post.isBounty && post.bountySolved
+                  ? 'The Logic Points already awarded stay with whoever '
+                        'earned them, but the post and its answers go.'
+                  : 'This cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        if (gone != true) return;
+
+        try {
+          await ref.read(postRepoProvider).delete(post.id);
+          onDeleted?.call();
+          if (context.mounted) showMessage(context, 'Post deleted.');
+        } catch (error) {
+          if (context.mounted) showError(context, error);
         }
       },
     );
