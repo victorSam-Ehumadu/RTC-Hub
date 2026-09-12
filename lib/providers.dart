@@ -264,6 +264,15 @@ final openFlagsProvider =
   return ref.watch(adminRepoProvider).openFlags();
 });
 
+/// §2.7's platform-level admin metrics — users by type, MAU, registrations
+/// over time, content volume, business pipeline. Separate from
+/// [adminStatsProvider] (the action-grid counts) so refreshing one doesn't
+/// re-fetch the other.
+final adminDashboardProvider =
+    FutureProvider.autoDispose<AdminDashboard>((ref) {
+  return ref.watch(adminRepoProvider).dashboard();
+});
+
 final studentStatsProvider =
     FutureProvider.autoDispose.family<StudentStats, String>((ref, userId) {
   return ref.watch(analyticsRepoProvider).forStudent(userId);

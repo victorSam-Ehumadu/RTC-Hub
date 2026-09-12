@@ -30,6 +30,31 @@ class AdminRepository {
   Future<void> deleteUser(String userId) =>
       db.from('profiles').delete().eq('id', userId);
 
+  /// Looks up any profile by email, regardless of status — `profiles_select`
+  /// grants an admin caller that visibility. Used to resolve an email to a
+  /// user id before [promoteToAdmin].
+  Future<Profile?> findByEmail(String email) async {
+    final row = await db
+        .from('profiles')
+        .select()
+        .eq('email', email.trim().toLowerCase())
+        .maybeSingle();
+    return row == null ? null : Profile.fromMap(row);
+  }
+
+  /// Grants ADMIN and activates the account in one write.
+  ///
+  /// No RPC needed for this one: `profiles_update_own` already lets an admin
+  /// update any row, and `trg_profiles_guard` only reverts role/status
+  /// changes made by a caller who *isn't* an admin — since whoever calls
+  /// this already is one, the trigger lets it straight through. That only
+  /// holds once at least one admin exists to make the call; the very first
+  /// admin still has to be bootstrapped by hand (see the commented block at
+  /// the bottom of migration 0001) because nobody exists yet to authorize it.
+  Future<void> promoteToAdmin(String userId) => db
+      .from('profiles')
+      .update({'role': 'ADMIN', 'status': 'ACTIVE'}).eq('id', userId);
+
   /// Listings waiting for review, plus their business.
   Future<List<Opportunity>> pendingOpportunities() async {
     final rows = await db
@@ -103,6 +128,92 @@ class AdminRepository {
     final rows = await query;
     return rows.length;
   }
+
+  /// §2.7's administrator dashboard, in full except flagged content count
+  /// (already a visual [AdminStats] tile): users by type, monthly active
+  /// users, registrations over time, content volume, and the business
+  /// approval pipeline. Every field comes from a SECURITY DEFINER RPC
+  /// (migration 0009) that re-checks `is_admin()` itself, since these
+  /// aggregate across every account/post/opportunity regardless of what
+  /// RLS would otherwise let the caller see.
+  Future<AdminDashboard> dashboard() async {
+    final results = await Future.wait<dynamic>([
+      db.rpc('admin_users_by_role'),
+      db.rpc('admin_monthly_active_users'),
+      db.rpc('admin_registrations_by_day', params: {'p_days': 30}),
+      db.rpc('admin_content_volume'),
+      db.rpc('admin_business_pipeline'),
+    ]);
+
+    List<CategoryCount> categories(
+      List<dynamic> rows,
+      String labelKey,
+      String countKey,
+    ) =>
+        rows
+            .cast<Map<String, dynamic>>()
+            .map((row) => CategoryCount(
+                  label: row[labelKey] as String,
+                  count: (row[countKey] as num).toInt(),
+                ))
+            .toList();
+
+    final byRole = categories(results[0] as List, 'role', 'total');
+    final regRows = (results[2] as List).cast<Map<String, dynamic>>();
+
+    return AdminDashboard(
+      usersByRole: byRole,
+      totalUsers: byRole.fold<int>(0, (sum, c) => sum + c.count),
+      monthlyActiveUsers: (results[1] as num?)?.toInt() ?? 0,
+      registrationsByDay: regRows
+          .map((row) => DailyMetric(
+                date: DateTime.tryParse((row['day'] ?? '') as String) ??
+                    DateTime.now(),
+                value: (row['signups'] as num).toInt(),
+              ))
+          .toList(),
+      contentVolume: categories(results[3] as List, 'kind', 'total'),
+      businessPipeline: categories(results[4] as List, 'status', 'total'),
+    );
+  }
+}
+
+/// The five §2.7 platform-level metrics that aren't a plain count —
+/// [AdminRepository.dashboard]'s return shape for the Overview tab's chart
+/// section.
+class AdminDashboard {
+  const AdminDashboard({
+    required this.usersByRole,
+    required this.totalUsers,
+    required this.monthlyActiveUsers,
+    required this.registrationsByDay,
+    required this.contentVolume,
+    required this.businessPipeline,
+  });
+
+  final List<CategoryCount> usersByRole;
+  final int totalUsers;
+
+  /// Accounts with a sign-in inside the last 30 days — see
+  /// `admin_monthly_active_users()` (migration 0009).
+  final int monthlyActiveUsers;
+  final List<DailyMetric> registrationsByDay;
+
+  /// Posts split by [Post.type] plus a single "OPPORTUNITY" row.
+  final List<CategoryCount> contentVolume;
+
+  /// BUSINESS-role profiles grouped by [Profile.status].
+  final List<CategoryCount> businessPipeline;
+}
+
+/// A label paired with a count — every §2.7 admin breakdown that isn't a
+/// time series (users by role, content volume by kind, business pipeline
+/// by status) shares this shape.
+class CategoryCount {
+  const CategoryCount({required this.label, required this.count});
+
+  final String label;
+  final int count;
 }
 
 class AdminStats {

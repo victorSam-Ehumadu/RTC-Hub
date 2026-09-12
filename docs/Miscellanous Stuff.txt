@@ -1,5 +1,9 @@
 If you need to run the app on the phone/emulator type:
 flutter run --dart-define-from-file=env.json
+flutter run -d chrome -t lib/main_admin.dart             lib/features/admin/admin_login_screen.dart
+     --dart-define-from-file=env.json
+
+flutter run -d chrome -t lib/main_admin.dart --dart-define-from-file=env.json
 
 To push to repo (for my fork atleast):
 1.  git status -s (or git diff)
@@ -27,3 +31,4 @@ TestPass1234
 
 201302403@my.richfield.ac.za
 TestTest
+
