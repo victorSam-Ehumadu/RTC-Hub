@@ -729,6 +729,7 @@ class DemoAuthRepository extends AuthRepository {
     int? graduationYear,
     String? companyName,
     String? industry,
+    List<String>? contentInterests,
   }) async {}
 
   @override

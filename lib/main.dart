@@ -7,6 +7,7 @@ import 'core/demo.dart';
 import 'core/env.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
+import 'core/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,12 +41,14 @@ class RtcHubApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final choice = ref.watch(themeControllerProvider);
+
     return MaterialApp.router(
       title: 'RTC Hub',
       debugShowCheckedModeBanner: false,
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.dark, // the terminal look is the default
+      theme: buildTheme(palette: choice.palette, dark: false),
+      darkTheme: buildTheme(palette: choice.palette, dark: true),
+      themeMode: choice.mode,
       routerConfig: ref.watch(routerProvider),
     );
   }

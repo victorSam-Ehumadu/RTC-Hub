@@ -44,6 +44,8 @@ dependencies:
   fl_chart: ^1.2.0
   google_fonts: ^8.2.1
   path: ^1.9.1
+  # Theme choice is a device preference, not an account fact.
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:

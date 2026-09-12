@@ -28,6 +28,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   String? _faculty;
   String? _course;
   String? _year;
+
+  /// Which faculties a business wants content from. Students and alumni never
+  /// answer this — `trg_profiles_interests` derives it from their faculty.
+  final _interests = <String>{'IT', 'BUSINESS'};
+
   bool _busy = false;
 
   @override
@@ -56,6 +61,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             academicYear: _isStudentish ? _year : null,
             companyName: _role == 'BUSINESS' ? _company.text : null,
             industry: _role == 'BUSINESS' ? _industry.text : null,
+            contentInterests:
+                _role == 'BUSINESS' ? _interests.toList() : null,
           );
       if (!mounted) return;
 
@@ -134,7 +141,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           ? '202512345@my.richfield.ac.za'
                           : 'you@company.co.za',
                       helperText: _role == 'STUDENT'
-                          ? 'Richfield address, 9-digit student number'
+                          ? 'Richfield or AAA address, 9-digit student number'
                           : null,
                       helperMaxLines: 2,
                     ),
@@ -142,7 +149,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       final value = v?.trim() ?? '';
                       if (!value.contains('@')) return 'Enter your email address';
                       if (_role == 'STUDENT' && !isValidStudentEmail(value)) {
-                        return 'Must be a @richfield.ac.za address with a '
+                        return 'Must be a Richfield or AAA address with a '
                             '9-digit prefix';
                       }
                       return null;
@@ -220,6 +227,44 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(labelText: 'Industry'),
                     ),
+
+                    const SectionHeader(title: 'Talent you are looking for'),
+                    Text(
+                      'Richfield has two faculties. Pick the ones you recruit '
+                      'from — it decides whose posts you see and who sees '
+                      'yours. You can change this later.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.65),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final f in kFaculties)
+                      CheckboxListTile(
+                        value: _interests.contains(f.code),
+                        onChanged: (on) => setState(() {
+                          if (on == true) {
+                            _interests.add(f.code);
+                          } else if (_interests.length > 1) {
+                            // Never let a business end up seeing nothing.
+                            _interests.remove(f.code);
+                          }
+                        }),
+                        title: Text(f.name),
+                        subtitle: Text(
+                          f.code == 'IT'
+                              ? 'Developers, analysts, forensics'
+                              : 'Commerce, administration, management',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                      ),
                   ],
 
                   const SizedBox(height: 28),

@@ -35,6 +35,7 @@ class AuthRepository {
     int? graduationYear,
     String? companyName,
     String? industry,
+    List<String>? contentInterests,
   }) async {
     final clean = email.trim().toLowerCase();
 
@@ -59,6 +60,10 @@ class AuthRepository {
         if (graduationYear != null) 'graduation_year': '$graduationYear',
         'company_name': ?companyName,
         'industry': ?industry,
+        // Which faculties a business wants content from. Students and alumni
+        // do not send this — trg_profiles_interests derives it from faculty.
+        if (contentInterests != null && contentInterests.isNotEmpty)
+          'content_interests': contentInterests,
       },
     );
   }

@@ -16,71 +16,75 @@ class PostRepository {
   ''';
 
   /// The connection-scoped feed: posts by people you are connected to, plus
-  /// your own. Mirrors `GET /api/posts/feed`.
+  /// your own.
   ///
-  /// Two round-trips rather than one join, because the connection is symmetric
-  /// and PostgREST cannot express "the other side of my accepted connections"
-  /// as an embedded filter.
+  /// Resolving the symmetric connection graph moved into `feed_post_ids()` in
+  /// migration 0007 — doing it in Dart meant pulling every connection row to
+  /// the device first, and it could not express faculty scoping at all. The
+  /// function is SECURITY INVOKER, so `posts_select` still applies inside it
+  /// and a Business student cannot be handed IT ids.
   Future<List<Post>> feed({int page = 0, int pageSize = 20}) async {
-    final me = requireUserId;
+    final ids = await db.rpc('feed_post_ids', params: {
+      'p_limit': pageSize,
+      'p_offset': page * pageSize,
+    }) as List;
+    if (ids.isEmpty) return [];
 
-    final conns = await db
-        .from('connections')
-        .select('sender_id, receiver_id')
-        .eq('status', 'ACCEPTED')
-        .or('sender_id.eq.$me,receiver_id.eq.$me');
-
-    final authorIds = <String>{me};
-    for (final c in conns) {
-      authorIds.add(c['sender_id'] == me
-          ? c['receiver_id'] as String
-          : c['sender_id'] as String);
-    }
-
-    final from = page * pageSize;
-    final rows = await db
-        .from('posts')
-        .select(_postSelect)
-        .inFilter('author_id', authorIds.toList())
-        .eq('is_flagged', false)
-        .order('created_at', ascending: false)
-        .range(from, from + pageSize - 1);
-
-    return _withMyReactions(rows.map(Post.fromMap).toList());
+    return _byIdsInOrder([
+      for (final row in ids) row['post_id'] as String,
+    ]);
   }
 
-  /// Everything public, for when the feed is empty because the user has not
-  /// connected to anyone yet. The old app had no equivalent and new students
-  /// landed on a blank screen.
+  /// Relevance-ranked discovery, for when the connection feed is empty or
+  /// thin. §2.4 asks for a feed ranked by relevance that behaves differently
+  /// per role; the scoring lives in `ranked_feed()` so it runs next to the
+  /// data rather than re-sorting a page on the device.
   Future<List<Post>> discover({int page = 0, int pageSize = 20}) async {
-    final from = page * pageSize;
-    final rows = await db
-        .from('posts')
-        .select(_postSelect)
-        .eq('is_flagged', false)
-        .order('created_at', ascending: false)
-        .range(from, from + pageSize - 1);
-    return _withMyReactions(rows.map(Post.fromMap).toList());
+    final ranked = await db.rpc('ranked_feed', params: {
+      'p_limit': pageSize,
+      'p_offset': page * pageSize,
+    }) as List;
+    if (ranked.isEmpty) return [];
+
+    return _byIdsInOrder([
+      for (final row in ranked) row['post_id'] as String,
+    ]);
+  }
+
+  /// Fetches posts by id and restores the order the ids came in — PostgREST
+  /// has no way to sort by "position in this list", and the ranking is the
+  /// whole point of the call that produced them.
+  Future<List<Post>> _byIdsInOrder(List<String> ids) async {
+    final rows = await db.from('posts').select(_postSelect).inFilter('id', ids);
+    final byId = {
+      for (final row in rows) row['id'] as String: Post.fromMap(row),
+    };
+    return _withMyReactions([
+      for (final id in ids)
+        if (byId[id] != null) byId[id]!,
+    ]);
   }
 
   /// Open bounties, highest value first. Mirrors `GET /api/posts/bounties`.
   ///
-  /// [faculty] filters on the *author's* faculty, which lives on the embedded
-  /// profile rather than on `posts`, so it is applied after the fetch.
+  /// [faculty] filters on `posts.faculty`, which 0007 denormalises from the
+  /// author. RLS scopes this to the caller's own faculties regardless, so the
+  /// parameter narrows within what they may already see.
   Future<List<Post>> bounties({String? faculty}) async {
-    final rows = await db
+    var query = db
         .from('posts')
         .select(_postSelect)
         .eq('is_bounty', true)
         .eq('bounty_solved', false)
-        .eq('is_flagged', false)
-        .order('bounty_points', ascending: false);
+        .eq('is_flagged', false);
+    // `posts.faculty` is denormalised by trg_posts_faculty (0007), so this is
+    // a real column filter now rather than a post-fetch pass over the
+    // embedded author.
+    if (faculty != null) query = query.eq('faculty', faculty);
 
-    var posts = rows.map(Post.fromMap).toList();
-    if (faculty != null) {
-      posts = posts.where((p) => p.author?.faculty == faculty).toList();
-    }
-    return _withMyReactions(posts);
+    final rows = await query.order('bounty_points', ascending: false);
+
+    return _withMyReactions(rows.map(Post.fromMap).toList());
   }
 
   Future<List<Post>> byAuthor(String userId) async {

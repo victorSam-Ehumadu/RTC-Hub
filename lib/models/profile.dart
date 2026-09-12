@@ -26,6 +26,7 @@ class Profile {
     this.profileCompleteness = 0,
     this.visibilityBusiness = true,
     this.visibilityPeers = true,
+    this.contentInterests = const [],
     this.createdAt,
   });
 
@@ -50,6 +51,12 @@ class Profile {
   final int profileCompleteness;
   final bool visibilityBusiness;
   final bool visibilityPeers;
+
+  /// Which faculties' content this account sees. Students and alumni get
+  /// their own faculty; a business picks one or both at signup. Kept in step
+  /// by `trg_profiles_interests` — see migration 0007.
+  final List<String> contentInterests;
+
   final DateTime? createdAt;
 
   bool get isStudent => role == 'STUDENT';
@@ -58,6 +65,20 @@ class Profile {
   bool get isAdmin => role == 'ADMIN';
   bool get isActive => status == 'ACTIVE';
   bool get isPending => status == 'PENDING';
+
+  bool get isIt => faculty == 'IT';
+  bool get isBusinessFaculty => faculty == 'BUSINESS';
+
+  /// True when this account sees content from both faculties — every admin,
+  /// and a business that recruits from both.
+  bool get seesBothFaculties => contentInterests.length > 1;
+
+  /// What a composer should attach to a new post. Null for an account that
+  /// spans both faculties, which is what makes a post cross-faculty.
+  String? get postingFaculty {
+    if (faculty != null) return faculty;
+    return contentInterests.length == 1 ? contentInterests.first : null;
+  }
 
   /// Businesses are shown by company; everyone else by their own name.
   String get displayName =>
@@ -98,6 +119,9 @@ class Profile {
         profileCompleteness: (map['profile_completeness'] as int?) ?? 0,
         visibilityBusiness: (map['visibility_business'] as bool?) ?? true,
         visibilityPeers: (map['visibility_peers'] as bool?) ?? true,
+        contentInterests: map['content_interests'] is List
+            ? (map['content_interests'] as List).cast<String>()
+            : const [],
         createdAt: DateTime.tryParse((map['created_at'] ?? '') as String),
       );
 
@@ -118,6 +142,10 @@ class Profile {
         'portfolio_url': portfolioUrl,
         'visibility_business': visibilityBusiness,
         'visibility_peers': visibilityPeers,
+        // Editable by a business choosing which cohorts to follow. The
+        // trigger overwrites it for students and alumni, so sending it is
+        // harmless there.
+        'content_interests': contentInterests.isEmpty ? null : contentInterests,
       };
 
   Profile copyWith({
@@ -136,6 +164,7 @@ class Profile {
     String? portfolioUrl,
     bool? visibilityBusiness,
     bool? visibilityPeers,
+    List<String>? contentInterests,
   }) =>
       Profile(
         id: id,
@@ -159,6 +188,7 @@ class Profile {
         profileCompleteness: profileCompleteness,
         visibilityBusiness: visibilityBusiness ?? this.visibilityBusiness,
         visibilityPeers: visibilityPeers ?? this.visibilityPeers,
+        contentInterests: contentInterests ?? this.contentInterests,
         createdAt: createdAt,
       );
 }

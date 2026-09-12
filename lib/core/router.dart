@@ -19,6 +19,7 @@ import '../features/opportunities/opportunities_screen.dart';
 import '../features/profile/edit_profile_screen.dart';
 import '../features/profile/leaderboard_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../providers.dart';
 import 'env.dart';
@@ -116,6 +117,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/edit-profile',
         builder: (_, _) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/settings',
+        builder: (_, _) => const SettingsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

@@ -76,12 +76,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: const Icon(Icons.edit_outlined),
             ),
             IconButton(
-              tooltip: 'Sign out',
-              onPressed: () async {
-                await ref.read(authRepoProvider).signOut();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
+              tooltip: 'Settings',
+              onPressed: () => context.push('/settings'),
+              icon: const Icon(Icons.settings_outlined),
             ),
           ],
         ],
