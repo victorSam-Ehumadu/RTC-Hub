@@ -126,7 +126,11 @@ class MessageRepository {
           'and(sender_id.eq.$me,receiver_id.eq.$otherId),'
           'and(sender_id.eq.$otherId,receiver_id.eq.$me)',
         )
-        .order('created_at');
+        // postgrest-dart defaults `ascending` to false (newest first),
+        // unlike plain SQL — the chat screen's reverse:true ListView and the
+        // realtime append in threadProvider both assume oldest-first, so this
+        // must be explicit or the newest message renders at the top.
+        .order('created_at', ascending: true);
     return rows.map(Message.fromMap).toList();
   }
 

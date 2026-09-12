@@ -265,13 +265,66 @@ class AccountGateScreen extends ConsumerWidget {
   }
 }
 
+/// White foreground used for text/icons that sit on top of [HubBanner] —
+/// plain white reads on both the blue field and the red photo half of the
+/// banner, regardless of the app's light/dark theme.
+const hubBannerForeground = Colors.white;
+
+/// Shadow that keeps [hubBannerForeground] text legible over the banner's
+/// busier (photo) half.
+const hubBannerTitleShadow = [Shadow(color: Colors.black87, blurRadius: 8)];
+
+/// The Richfield banner image with a left-to-right dark scrim, sized to sit
+/// behind an `AppBar` via `flexibleSpace`. Shared by [HubAppBar] and any
+/// screen with its own `AppBar` that wants the same top-bar treatment (e.g.
+/// [ProfileScreen]).
+class HubBanner extends StatelessWidget {
+  const HubBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          'assets/images/richfield-banner-logo.png',
+          fit: BoxFit.cover,
+          alignment: Alignment.centerLeft,
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                Colors.black.withValues(alpha: 0.8),
+                Colors.black.withValues(alpha: 0.5),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Shared app bar for the tab screens: title on the left, notification bell
 /// with a live unread badge on the right.
+///
+/// The Richfield banner sits behind the title and action icons on every tab
+/// by default — `showBanner: false` opts a screen out if it ever needs the
+/// plain bar back.
 class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const HubAppBar({super.key, required this.title, this.actions});
+  const HubAppBar({
+    super.key,
+    required this.title,
+    this.actions,
+    this.showBanner = true,
+  });
 
   final String title;
   final List<Widget>? actions;
+  final bool showBanner;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -279,9 +332,25 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+    final onBanner = showBanner ? hubBannerForeground : null;
 
     return AppBar(
-      title: Text(title),
+      backgroundColor: showBanner ? Colors.transparent : null,
+      elevation: 0,
+      flexibleSpace: showBanner ? const HubBanner() : null,
+      iconTheme: onBanner == null ? null : IconThemeData(color: onBanner),
+      actionsIconTheme:
+          onBanner == null ? null : IconThemeData(color: onBanner),
+      title: Text(
+        title,
+        style: onBanner == null
+            ? null
+            : TextStyle(
+                color: onBanner,
+                fontWeight: FontWeight.w800,
+                shadows: hubBannerTitleShadow,
+              ),
+      ),
       actions: [
         ...?actions,
         IconButton(
@@ -289,7 +358,7 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
           icon: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(Icons.notifications_none),
+              Icon(Icons.notifications_none, color: onBanner),
               if (unread > 0)
                 Positioned(
                   right: -3,
