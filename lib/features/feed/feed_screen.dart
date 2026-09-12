@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../shell/app_shell.dart';
 import 'post_card.dart';
 
@@ -52,11 +53,12 @@ class FeedScreen extends ConsumerWidget {
                   ref.read(feedModeProvider.notifier).state = s.first,
             ),
           ),
+          const _FacultyScopeBar(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(feedProvider),
               child: feed.when(
-                loading: () => const Loading(),
+                loading: () => const PostListSkeleton(),
                 error: (err, _) => ErrorView(
                   error: err,
                   onRetry: () => ref.invalidate(feedProvider),
@@ -78,9 +80,11 @@ class FeedScreen extends ConsumerWidget {
                                       'are connected to. Switch to Discover to '
                                       'find classmates and alumni.',
                                   action: FilledButton(
-                                    onPressed: () => ref
-                                        .read(feedModeProvider.notifier)
-                                        .state = FeedMode.discover,
+                                    onPressed: () =>
+                                        ref
+                                                .read(feedModeProvider.notifier)
+                                                .state =
+                                            FeedMode.discover,
                                     child: const Text('Browse Discover'),
                                   ),
                                 )
@@ -107,6 +111,48 @@ class FeedScreen extends ConsumerWidget {
                   );
                 },
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A quiet line saying whose content this feed contains.
+///
+/// Migration 0007 scopes the feed by faculty inside RLS, which is the right
+/// place for it — but an invisible rule reads as an arbitrary one. Naming it
+/// costs a single line and turns "why is this empty" into something the
+/// reader can act on.
+class _FacultyScopeBar extends ConsumerWidget {
+  const _FacultyScopeBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meProvider);
+    final interests = me?.contentInterests ?? const <String>[];
+    if (interests.isEmpty) return const SizedBox.shrink();
+
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.55);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          for (final faculty in interests) ...[
+            FacultyChip(faculty: faculty, compact: true),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(
+              interests.length > 1
+                  ? 'Showing both faculties'
+                  : 'Scoped to your faculty',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: muted),
             ),
           ),
         ],

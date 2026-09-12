@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/social.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -33,7 +34,7 @@ class NotificationsScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(notificationsProvider),
         child: notifications.when(
-          loading: () => const Loading(),
+          loading: () => const TileListSkeleton(),
           error: (err, _) => ErrorView(
             error: err,
             onRetry: () => ref.invalidate(notificationsProvider),

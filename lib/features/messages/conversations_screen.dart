@@ -7,6 +7,7 @@ import '../../models/profile.dart';
 import '../../models/social.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../shell/app_shell.dart';
 
 class ConversationsScreen extends ConsumerWidget {
@@ -30,7 +31,7 @@ class ConversationsScreen extends ConsumerWidget {
             ..invalidate(connectionRequestsProvider);
         },
         child: conversations.when(
-          loading: () => const Loading(),
+          loading: () => const TileListSkeleton(),
           error: (err, _) => ErrorView(
             error: err,
             onRetry: () => ref.invalidate(conversationsProvider),

@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
 
@@ -84,7 +85,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
       body: profile.when(
-        loading: () => const Loading(),
+        loading: () => const ProfileSkeleton(),
         error: (err, _) => ErrorView(
           error: err,
           onRetry: () => ref.invalidate(profileProvider(targetId)),

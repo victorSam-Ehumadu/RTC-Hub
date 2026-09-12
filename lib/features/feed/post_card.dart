@@ -8,6 +8,7 @@ import '../../models/post.dart';
 import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/sheet_preview.dart';
 
 /// One post in a feed or bounty list.
@@ -40,7 +41,8 @@ class _PostCardState extends ConsumerState<PostCard> {
 
     setState(() {
       _post = _post.copyWith(
-        reactionCount: _post.reactionCount +
+        reactionCount:
+            _post.reactionCount +
             (removing ? -1 : (_post.myReaction == null ? 1 : 0)),
         myReaction: removing ? null : emoji,
         clearMyReaction: removing,
@@ -60,8 +62,9 @@ class _PostCardState extends ConsumerState<PostCard> {
   @override
   Widget build(BuildContext context) {
     final author = _post.author;
-    final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.6);
 
     return Card(
       child: InkWell(
@@ -108,8 +111,13 @@ class _PostCardState extends ConsumerState<PostCard> {
                       ],
                     ),
                   ),
-                  if (_post.isBounty)
+                  // Faculty is what 0007 scopes the feed by, so showing it
+                  // makes the rule legible instead of mysterious.
+                  FacultyChip(faculty: _post.faculty, compact: true),
+                  if (_post.isBounty) ...[
+                    const SizedBox(width: 6),
                     PointsChip(points: _post.bountyPoints),
+                  ],
                 ],
               ),
 
@@ -124,7 +132,10 @@ class _PostCardState extends ConsumerState<PostCard> {
                 ),
 
               const SizedBox(height: 12),
-              Text(_post.content, style: const TextStyle(height: 1.45, fontSize: 14.5)),
+              Text(
+                _post.content,
+                style: const TextStyle(height: 1.45, fontSize: 14.5),
+              ),
 
               if (_post.hasCode) ...[
                 const SizedBox(height: 12),
@@ -138,11 +149,7 @@ class _PostCardState extends ConsumerState<PostCard> {
 
               if (_post.hasSheet) ...[
                 const SizedBox(height: 12),
-                SheetPreview(
-                  sheet: _post.sheet!,
-                  title: 'sheet',
-                  maxRows: 4,
-                ),
+                SheetPreview(sheet: _post.sheet!, title: 'sheet', maxRows: 4),
               ],
 
               if (_post.bountyModule != null) ...[
@@ -157,15 +164,14 @@ class _PostCardState extends ConsumerState<PostCard> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _ReactionButton(
-                    post: _post,
-                    onReact: _react,
-                  ),
+                  _ReactionButton(post: _post, onReact: _react),
                   const SizedBox(width: 16),
                   Icon(Icons.mode_comment_outlined, size: 17, color: muted),
                   const SizedBox(width: 5),
-                  Text('${_post.commentCount}',
-                      style: TextStyle(fontSize: 13, color: muted)),
+                  Text(
+                    '${_post.commentCount}',
+                    style: TextStyle(fontSize: 13, color: muted),
+                  ),
                   const Spacer(),
                   if (_post.isOpenBounty)
                     TextButton(
@@ -191,53 +197,66 @@ class _ReactionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reacted = post.myReaction != null;
-    final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.6);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => onReact(post.myReaction ?? '👍'),
-      onLongPress: () async {
-        final picked = await showModalBottomSheet<String>(
-          context: context,
-          builder: (_) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (final emoji in kReactionEmojis)
-                    IconButton(
-                      iconSize: 30,
-                      onPressed: () => Navigator.pop(context, emoji),
-                      icon: Text(emoji, style: const TextStyle(fontSize: 26)),
-                    ),
-                ],
+    return Semantics(
+      button: true,
+      label: reacted
+          ? 'Reacted ${post.myReaction}. ${post.reactionCount} reactions. '
+                'Tap to remove, long press to change.'
+          : '${post.reactionCount} reactions. Tap to react, long press to '
+                'choose an emoji.',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onReact(post.myReaction ?? '👍'),
+        onLongPress: () async {
+          final picked = await showModalBottomSheet<String>(
+            context: context,
+            builder: (_) => SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (final emoji in kReactionEmojis)
+                      IconButton(
+                        iconSize: 30,
+                        onPressed: () => Navigator.pop(context, emoji),
+                        icon: Text(emoji, style: const TextStyle(fontSize: 26)),
+                      ),
+                  ],
+                ),
               ),
             ),
+          );
+          if (picked != null) await onReact(picked);
+        },
+        child: Container(
+          // 40x40 minimum: the old 4px padding gave a target barely larger
+          // than the glyph, which is a miss on a phone held one-handed.
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (reacted)
+                Text(post.myReaction!, style: const TextStyle(fontSize: 15))
+              else
+                Icon(Icons.favorite_border, size: 17, color: muted),
+              const SizedBox(width: 5),
+              Text(
+                '${post.reactionCount}',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: reacted ? AppColors.accent : muted,
+                  fontWeight: reacted ? FontWeight.w700 : FontWeight.w400,
+                ),
+              ),
+            ],
           ),
-        );
-        if (picked != null) await onReact(picked);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (reacted)
-              Text(post.myReaction!, style: const TextStyle(fontSize: 15))
-            else
-              Icon(Icons.favorite_border, size: 17, color: muted),
-            const SizedBox(width: 5),
-            Text(
-              '${post.reactionCount}',
-              style: TextStyle(
-                fontSize: 13,
-                color: reacted ? AppColors.accent : muted,
-                fontWeight: reacted ? FontWeight.w700 : FontWeight.w400,
-              ),
-            ),
-          ],
         ),
       ),
     );

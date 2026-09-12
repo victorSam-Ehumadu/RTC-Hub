@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/opportunity.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../shell/app_shell.dart';
 
 /// Two different screens behind one tab: businesses manage their listings,
@@ -70,7 +71,7 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
                   ..invalidate(opportunitiesProvider);
               },
               child: listings.when(
-                loading: () => const Loading(),
+                loading: () => const OpportunityListSkeleton(),
                 error: (err, _) => ErrorView(error: err),
                 data: (list) {
                   if (list.isEmpty) {

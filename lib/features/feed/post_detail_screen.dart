@@ -8,6 +8,7 @@ import '../../models/post.dart';
 import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/sheet_preview.dart';
 import 'submit_answer_sheet.dart';
 
@@ -501,7 +502,11 @@ class _PostBody extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (post.isBounty) PointsChip(points: post.bountyPoints),
+                FacultyChip(faculty: post.faculty, compact: true),
+                if (post.isBounty) ...[
+                  const SizedBox(width: 6),
+                  PointsChip(points: post.bountyPoints),
+                ],
               ],
             ),
             if (post.isBounty) ...[

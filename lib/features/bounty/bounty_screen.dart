@@ -6,6 +6,7 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/skeleton.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
 
@@ -66,7 +67,7 @@ class BountyScreen extends ConsumerWidget {
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(bountiesProvider),
               child: bounties.when(
-                loading: () => const Loading(),
+                loading: () => const PostListSkeleton(),
                 error: (err, _) => ErrorView(
                   error: err,
                   onRetry: () => ref.invalidate(bountiesProvider),
