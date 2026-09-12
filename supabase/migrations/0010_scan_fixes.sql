@@ -211,7 +211,12 @@ CREATE POLICY "own_folder_delete" ON storage.objects FOR DELETE
 -- telling the author their bounty went up, and returning a count so a manual
 -- run reports what it did.
 
-CREATE OR REPLACE FUNCTION escalate_bounties()
+-- 0001 declared this RETURNS VOID. CREATE OR REPLACE cannot change a return
+-- type, so the old one has to go first — Postgres says as much (42P13).
+-- Dropping is safe: nothing references it, which is the whole problem.
+DROP FUNCTION IF EXISTS escalate_bounties();
+
+CREATE FUNCTION escalate_bounties()
 RETURNS INT
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $fn$
 DECLARE moved INT;
