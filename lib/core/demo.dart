@@ -13,6 +13,7 @@ import '../data/social_repository.dart';
 import '../data/storage_repository.dart';
 import '../models/opportunity.dart';
 import '../models/post.dart';
+import '../models/sheet.dart';
 import '../models/profile.dart';
 import '../models/social.dart';
 import '../providers.dart';
@@ -776,6 +777,8 @@ class DemoPostRepository extends PostRepository {
     String? thumbnailUrl,
     bool isBounty = false,
     String? bountyModule,
+    Map<String, dynamic>? sheetData,
+    String? sheetName,
   }) async {
     final post = Post(
       id: 'p-${DateTime.now().millisecondsSinceEpoch}',
@@ -792,6 +795,9 @@ class DemoPostRepository extends PostRepository {
       // 10 is what trg_posts_guard would set.
       bountyPoints: isBounty ? 10 : 0,
       bountyModule: bountyModule,
+      // trg_posts_faculty copies this from the author.
+      faculty: demoMe.faculty,
+      sheet: sheetData == null ? null : SheetDoc.fromMap(sheetData),
     );
     demoPosts.insert(0, post);
     _ping();
@@ -822,8 +828,46 @@ class DemoPostRepository extends PostRepository {
   }
 
   @override
-  Future<List<Comment>> comments(String postId) async =>
-      List.of(demoComments[postId] ?? const <Comment>[]);
+  Future<List<Comment>> comments(String postId, {String? kind}) async {
+    final all = demoComments[postId] ?? const <Comment>[];
+    return [
+      for (final c in all)
+        if (kind == null || c.kind == kind) c,
+    ];
+  }
+
+  @override
+  Future<Comment> addSubmission(
+    String postId, {
+    required String content,
+    String? codeLanguage,
+    String? codeSnippet,
+    Map<String, dynamic>? sheetData,
+    String? attachmentUrl,
+    String? attachmentName,
+    int? attachmentSize,
+    String? attachmentKind,
+  }) async {
+    final comment = Comment(
+      id: 'c-${DateTime.now().millisecondsSinceEpoch}',
+      postId: postId,
+      authorId: demoMe.id,
+      author: demoMe,
+      content: content.trim(),
+      createdAt: DateTime.now(),
+      kind: 'SUBMISSION',
+      codeLanguage: codeLanguage,
+      codeSnippet: codeSnippet,
+      sheet: sheetData == null ? null : SheetDoc.fromMap(sheetData),
+      attachmentUrl: attachmentUrl,
+      attachmentName: attachmentName,
+      attachmentSize: attachmentSize,
+      attachmentKind: attachmentKind,
+    );
+    demoComments.putIfAbsent(postId, () => <Comment>[]).add(comment);
+    _ping();
+    return comment;
+  }
 
   @override
   Future<Comment> addComment(

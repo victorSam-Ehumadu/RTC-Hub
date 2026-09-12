@@ -112,6 +112,8 @@ class PostRepository {
     String? thumbnailUrl,
     bool isBounty = false,
     String? bountyModule,
+    Map<String, dynamic>? sheetData,
+    String? sheetName,
   }) async {
     // bounty_points / bounty_solved / is_flagged are set by trg_posts_guard;
     // sending them from here would be ignored anyway.
@@ -127,6 +129,8 @@ class PostRepository {
           'thumbnail_url': thumbnailUrl,
           'is_bounty': isBounty,
           'bounty_module': bountyModule,
+          'sheet_data': sheetData,
+          'sheet_name': sheetName,
         })
         .select(_postSelect)
         .single();
@@ -166,13 +170,17 @@ class PostRepository {
     return emoji;
   }
 
-  Future<List<Comment>> comments(String postId) async {
-    final rows = await db
+  /// Comments on a post. [kind] narrows to one section of a bounty thread —
+  /// 'DISCUSSION' or 'SUBMISSION' — and null returns both.
+  Future<List<Comment>> comments(String postId, {String? kind}) async {
+    var query = db
         .from('comments')
         .select(
             '*, author:profiles!author_id(id, full_name, avatar_url, role, course)')
-        .eq('post_id', postId)
-        .order('created_at');
+        .eq('post_id', postId);
+    if (kind != null) query = query.eq('kind', kind);
+
+    final rows = await query.order('created_at');
     return rows.map(Comment.fromMap).toList();
   }
 
@@ -180,6 +188,46 @@ class PostRepository {
     String postId, {
     required String content,
     String? parentId,
+  }) =>
+      _insertComment(postId, content: content, parentId: parentId);
+
+  /// An answer to a bounty, carrying code, a spreadsheet or an uploaded file.
+  ///
+  /// `trg_comments_guard` (0008) rejects a submission with none of the three,
+  /// and rejects one on a post that is not a bounty — so the validation the
+  /// composer does is a courtesy, not the boundary.
+  Future<Comment> addSubmission(
+    String postId, {
+    required String content,
+    String? codeLanguage,
+    String? codeSnippet,
+    Map<String, dynamic>? sheetData,
+    String? attachmentUrl,
+    String? attachmentName,
+    int? attachmentSize,
+    String? attachmentKind,
+  }) =>
+      _insertComment(
+        postId,
+        content: content,
+        kind: 'SUBMISSION',
+        extra: {
+          'code_language': codeLanguage,
+          'code_snippet': codeSnippet,
+          'sheet_data': sheetData,
+          'attachment_url': attachmentUrl,
+          'attachment_name': attachmentName,
+          'attachment_size': attachmentSize,
+          'attachment_kind': attachmentKind,
+        },
+      );
+
+  Future<Comment> _insertComment(
+    String postId, {
+    required String content,
+    String? parentId,
+    String kind = 'DISCUSSION',
+    Map<String, dynamic> extra = const {},
   }) async {
     final row = await db
         .from('comments')
@@ -188,6 +236,13 @@ class PostRepository {
           'author_id': requireUserId,
           'content': content.trim(),
           'parent_id': parentId,
+          'kind': kind,
+          // Drop nulls rather than sending them: an explicit null would
+          // overwrite a column default on a later upsert.
+          ...{
+            for (final entry in extra.entries)
+              if (entry.value != null) entry.key: entry.value,
+          },
         })
         .select(
             '*, author:profiles!author_id(id, full_name, avatar_url, role, course)')

@@ -49,6 +49,13 @@ dependencies:
   # Piston, for running snippets attached to posts. The only
   # non-Supabase service the app talks to.
   http: ^1.2.2
+  # Spreadsheet round-trip: build a real .xlsx so Excel and Sheets open and
+  # recalculate it, rather than shipping our own formula engine.
+  excel: ^4.0.6
+  file_picker: ^12.3.0
+  open_filex: ^4.7.0
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

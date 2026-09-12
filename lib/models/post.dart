@@ -1,4 +1,5 @@
 import 'profile.dart';
+import 'sheet.dart';
 
 /// A row from `posts`, optionally with its author and engagement counts
 /// joined in by the embedded select in `PostRepository`.
@@ -26,6 +27,8 @@ class Post {
     this.reactionCount = 0,
     this.commentCount = 0,
     this.myReaction,
+    this.faculty,
+    this.sheet,
   });
 
   final String id;
@@ -46,11 +49,20 @@ class Post {
   final int reactionCount;
   final int commentCount;
 
+  /// Which faculty's audience this post belongs to. Denormalised from the
+  /// author by `trg_posts_faculty` (migration 0007); null means both.
+  final String? faculty;
+
+  /// Spreadsheet attached to the post, if any. The Business-faculty
+  /// counterpart to [codeSnippet].
+  final SheetDoc? sheet;
+
   /// The emoji this user reacted with, or null. Filled in separately because
   /// PostgREST cannot filter an embedded row to the current user.
   final String? myReaction;
 
   bool get hasCode => (codeSnippet?.trim().isNotEmpty ?? false);
+  bool get hasSheet => sheet != null && !sheet!.isEmpty;
   bool get isOpenBounty => isBounty && !bountySolved;
 
   factory Post.fromMap(Map<String, dynamic> map) => Post(
@@ -74,6 +86,11 @@ class Post {
         bountyModule: map['bounty_module'] as String?,
         reactionCount: embeddedCount(map['post_reactions']),
         commentCount: embeddedCount(map['comments']),
+        faculty: map['faculty'] as String?,
+        sheet: map['sheet_data'] is Map
+            ? SheetDoc.fromMap(
+                Map<String, dynamic>.from(map['sheet_data'] as Map))
+            : null,
       );
 
   Post copyWith({
@@ -102,6 +119,8 @@ class Post {
         reactionCount: reactionCount ?? this.reactionCount,
         commentCount: commentCount ?? this.commentCount,
         myReaction: clearMyReaction ? null : (myReaction ?? this.myReaction),
+        faculty: faculty,
+        sheet: sheet,
       );
 }
 
@@ -118,6 +137,14 @@ class Comment {
     this.author,
     this.isSolution = false,
     this.parentId,
+    this.kind = 'DISCUSSION',
+    this.attachmentUrl,
+    this.attachmentName,
+    this.attachmentSize,
+    this.attachmentKind,
+    this.codeLanguage,
+    this.codeSnippet,
+    this.sheet,
   });
 
   final String id;
@@ -128,6 +155,37 @@ class Comment {
   final Profile? author;
   final bool isSolution;
   final String? parentId;
+
+  /// DISCUSSION or SUBMISSION. A bounty thread shows them as two separate
+  /// sections so answers do not get buried under chatter — see migration
+  /// 0008, which also refuses an empty submission.
+  final String kind;
+
+  final String? attachmentUrl;
+  final String? attachmentName;
+  final int? attachmentSize;
+
+  /// CODE, SHEET or FILE — what the attachment actually is, so the UI can
+  /// offer Run, Open in Excel, or just Download.
+  final String? attachmentKind;
+
+  final String? codeLanguage;
+  final String? codeSnippet;
+  final SheetDoc? sheet;
+
+  bool get isSubmission => kind == 'SUBMISSION';
+  bool get hasCode => (codeSnippet?.trim().isNotEmpty ?? false);
+  bool get hasSheet => sheet != null && !sheet!.isEmpty;
+  bool get hasAttachment => (attachmentUrl?.isNotEmpty ?? false);
+
+  /// Human-readable attachment size, for the submission row.
+  String? get attachmentSizeLabel {
+    final bytes = attachmentSize;
+    if (bytes == null || bytes <= 0) return null;
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 
   factory Comment.fromMap(Map<String, dynamic> map) => Comment(
         id: map['id'] as String,
@@ -141,5 +199,16 @@ class Comment {
             : null,
         isSolution: (map['is_solution'] as bool?) ?? false,
         parentId: map['parent_id'] as String?,
+        kind: (map['kind'] ?? 'DISCUSSION') as String,
+        attachmentUrl: map['attachment_url'] as String?,
+        attachmentName: map['attachment_name'] as String?,
+        attachmentSize: map['attachment_size'] as int?,
+        attachmentKind: map['attachment_kind'] as String?,
+        codeLanguage: map['code_language'] as String?,
+        codeSnippet: map['code_snippet'] as String?,
+        sheet: map['sheet_data'] is Map
+            ? SheetDoc.fromMap(
+                Map<String, dynamic>.from(map['sheet_data'] as Map))
+            : null,
       );
 }

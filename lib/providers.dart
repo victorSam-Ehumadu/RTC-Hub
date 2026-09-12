@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/supabase.dart';
 import 'data/admin_repository.dart';
 import 'data/code_runner.dart';
+import 'data/document_service.dart';
 import 'data/auth_repository.dart';
 import 'data/opportunity_repository.dart';
 import 'data/post_repository.dart';
@@ -34,6 +35,10 @@ final storageRepoProvider = Provider((_) => const StorageRepository());
 /// Sandboxed execution for snippets. Not a Supabase repository — see
 /// `data/code_runner.dart` for why it is a separate service.
 final codeRunnerProvider = Provider((_) => const CodeRunner());
+
+/// Export to .xlsx / source files and hand off to Excel, Sheets or an
+/// editor. See `data/document_service.dart`.
+final documentServiceProvider = Provider((_) => const DocumentService());
 
 // ─── Session and profile ──────────────────────────────────────
 
@@ -93,6 +98,15 @@ final postProvider =
 final commentsProvider =
     FutureProvider.autoDispose.family<List<Comment>, String>((ref, postId) {
   return ref.watch(postRepoProvider).comments(postId);
+});
+
+/// One section of a bounty thread. Keyed by `"<postId>|<kind>"` because a
+/// Riverpod family takes a single argument and records are not const-able as
+/// a family key across Riverpod 2.
+final commentSectionProvider =
+    FutureProvider.autoDispose.family<List<Comment>, String>((ref, key) {
+  final parts = key.split('|');
+  return ref.watch(postRepoProvider).comments(parts.first, kind: parts.last);
 });
 
 final postsByAuthorProvider =
