@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../onboarding/tutorial_screen.dart';
 
 /// Bottom-nav frame, and the gate that decides whether an authenticated user
 /// is actually allowed in.
@@ -45,6 +46,17 @@ class AppShell extends ConsumerWidget {
           );
         }
         if (!me.isActive) return AccountGateScreen(status: me.status);
+
+        // Stream A: first-run tutorial gate. Same pattern as the account
+        // check above — this needs an async read (`onboarding_progress`),
+        // so it lives here rather than in the router's synchronous
+        // `redirect`. TutorialScreen chains into the AI onboarding chat
+        // once finished; see its `_finish()`.
+        final onboarding = ref.watch(onboardingProgressProvider);
+        if (onboarding.isLoading) return const Scaffold(body: Loading());
+        if (onboarding.valueOrNull?.tutorialComplete == false) {
+          return const TutorialScreen();
+        }
 
         return Scaffold(
           body: shell,
