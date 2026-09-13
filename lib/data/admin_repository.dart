@@ -332,6 +332,77 @@ class AnalyticsRepository {
             ))
         .toList();
   }
+
+  /// §2.7's business dashboard, in full: applicant pipeline per listing,
+  /// engagement rate on listings, candidate skill distribution across
+  /// programmes, applicant demographics by programme and year, and the
+  /// company profile's own reach. See migration 0013 for why every read
+  /// here runs as the caller (invoker rights) rather than SECURITY
+  /// DEFINER — §2.1's "business users may not access ... personal
+  /// information beyond what a student has explicitly made visible" is
+  /// enforced by RLS on `profiles`, and invoker rights is what keeps that
+  /// enforced inside these aggregates instead of bypassing it.
+  Future<BusinessStats> forBusiness(String userId) async {
+    final results = await Future.wait<dynamic>([
+      db.rpc('business_listing_pipeline'),
+      db.rpc('business_applicant_skill_distribution', params: {'p_limit': 8}),
+      db.rpc('business_applicant_demographics'),
+      db
+          .from('profile_analytics')
+          .select('date, profile_views')
+          .eq('user_id', userId)
+          .order('date', ascending: false)
+          .limit(30),
+    ]);
+
+    final pipeline = (results[0] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => ListingPipeline(
+              title: (row['title'] ?? '') as String,
+              status: (row['status'] ?? 'PENDING') as String,
+              applicants: (row['applicant_count'] as num).toInt(),
+              reach: (row['reach'] as num).toInt(),
+            ))
+        .toList();
+
+    final skills = (results[1] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => CandidateSkill(
+              skill: row['skill'] as String,
+              count: (row['total'] as num).toInt(),
+              topCourse: row['top_course'] as String?,
+            ))
+        .toList();
+
+    final demographics = (results[2] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => CategoryCount(
+              label: '${row['course']} · ${row['academic_year']}',
+              count: (row['total'] as num).toInt(),
+            ))
+        .toList();
+
+    final daily = (results[3] as List).cast<Map<String, dynamic>>();
+    final profileViews = daily.fold<int>(
+      0,
+      (sum, row) => sum + ((row['profile_views'] as int?) ?? 0),
+    );
+    final viewsByDay = daily.reversed
+        .map((row) => DailyMetric(
+              date: DateTime.tryParse((row['date'] ?? '') as String) ??
+                  DateTime.now(),
+              value: (row['profile_views'] as int?) ?? 0,
+            ))
+        .toList();
+
+    return BusinessStats(
+      pipeline: pipeline,
+      candidateSkills: skills,
+      applicantDemographics: demographics,
+      profileViews: profileViews,
+      viewsByDay: viewsByDay,
+    );
+  }
 }
 
 class StudentStats {
@@ -399,4 +470,80 @@ class SkillCount {
 
   final String skill;
   final int count;
+}
+
+/// §2.7's business-dashboard return shape — see
+/// [AnalyticsRepository.forBusiness].
+class BusinessStats {
+  const BusinessStats({
+    required this.pipeline,
+    required this.candidateSkills,
+    required this.applicantDemographics,
+    required this.profileViews,
+    required this.viewsByDay,
+  });
+
+  /// One entry per posted listing (any status) — §2.7's "total applicant
+  /// pipeline per posted opportunity" plus, per listing, what "engagement
+  /// rate on job listings" is computed from.
+  final List<ListingPipeline> pipeline;
+
+  /// §2.7's "candidate skill distribution across Richfield programmes" —
+  /// scoped to the caller's own applicants (see migration 0013's header
+  /// for why), each skill paired with the programme it's most common in
+  /// among those applicants.
+  final List<CandidateSkill> candidateSkills;
+
+  /// §2.7's "demographic breakdown of applicants by programme and year of
+  /// study" — one [CategoryCount] per (course, academic year) combination,
+  /// label already joined as "Course · Year".
+  final List<CategoryCount> applicantDemographics;
+
+  /// §2.7's "overall reach and visibility statistics for the company
+  /// profile" — same `profile_analytics.profile_views` a student's
+  /// dashboard reads, just for the business's own profile.
+  final int profileViews;
+  final List<DailyMetric> viewsByDay;
+}
+
+/// One posted listing's funnel: how many people it reached (distinct
+/// viewers, see `opportunity_views` in migration 0013) versus how many of
+/// them applied.
+class ListingPipeline {
+  const ListingPipeline({
+    required this.title,
+    required this.status,
+    required this.applicants,
+    required this.reach,
+  });
+
+  final String title;
+  final String status;
+  final int applicants;
+
+  /// Distinct viewers. Always 0 for a PENDING/REJECTED listing — students
+  /// only ever see ACTIVE ones — so this is never a listing's fault to
+  /// display as a literal 0% engagement rate; the dashboard should read it
+  /// as "not published yet" instead.
+  final int reach;
+
+  /// Applicants ÷ reach, as a 0–100 percentage. Null (not 0) when nobody
+  /// has seen the listing yet, so the UI can tell "no engagement" apart
+  /// from "no data to compute one".
+  double? get engagementRate => reach == 0 ? null : (applicants / reach) * 100;
+}
+
+/// A skill among the caller's applicants, plus the programme it's most
+/// common in — see `business_applicant_skill_distribution()` (migration
+/// 0010) for how [topCourse] is picked.
+class CandidateSkill {
+  const CandidateSkill({
+    required this.skill,
+    required this.count,
+    this.topCourse,
+  });
+
+  final String skill;
+  final int count;
+  final String? topCourse;
 }

@@ -282,3 +282,11 @@ final studentStatsProvider =
 final wantedSkillsProvider = FutureProvider.autoDispose<List<SkillCount>>((ref) {
   return ref.watch(analyticsRepoProvider).wantedSkills();
 });
+
+/// §2.7's business dashboard — applicant pipeline, engagement rate,
+/// candidate skill distribution, applicant demographics, and company
+/// profile reach. See `AnalyticsRepository.forBusiness`.
+final businessStatsProvider =
+    FutureProvider.autoDispose.family<BusinessStats, String>((ref, userId) {
+  return ref.watch(analyticsRepoProvider).forBusiness(userId);
+});
