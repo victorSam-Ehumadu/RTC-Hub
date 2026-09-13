@@ -3,6 +3,7 @@ flutter run --dart-define-from-file=env.json
 
 
 flutter run -d chrome -t lib/main_admin.dart --dart-define-from-file=env.json
+CHROME_EXECUTABLE="/Applications/Opera GX.app/Contents/MacOS/Opera" flutter run -d chrome -t lib/main_admin.dart --dart-define-from-file=env.json
 
 To push to repo (for my fork atleast):
 1.  git status -s (or git diff)
@@ -30,4 +31,6 @@ TestPass1234
 
 201302403@my.richfield.ac.za
 TestTest
+
+Business@1
 
