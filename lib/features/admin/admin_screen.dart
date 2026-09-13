@@ -123,6 +123,13 @@ class _OverviewTab extends ConsumerWidget {
                 ),
               ],
             ),
+            const SectionHeader(title: 'Analytics'),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/admin-dashboard'),
+              icon: const Icon(Icons.query_stats, size: 18),
+              label: const Text('Open the platform dashboard'),
+            ),
+
             const SectionHeader(title: 'Broadcast'),
             FilledButton.icon(
               onPressed: () => _announce(context, ref),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_screen.dart';
+import '../features/analytics/admin_dashboard_screen.dart';
+import '../features/analytics/business_dashboard_screen.dart';
 import '../features/analytics/student_dashboard_screen.dart';
 import '../features/assistant/assistant_screen.dart';
 import '../features/auth/login_screen.dart';
@@ -123,6 +125,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/edit-profile',
         builder: (_, _) => const EditProfileScreen(),
+      ),
+      // §2.7 wants three distinct dashboards, so they are three routes
+      // rather than one screen that branches on role.
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/admin-dashboard',
+        builder: (_, _) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/business-dashboard',
+        builder: (_, _) => const BusinessDashboardScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

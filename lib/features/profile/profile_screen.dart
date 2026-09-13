@@ -79,6 +79,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onPressed: () => context.push('/dashboard'),
                 icon: const Icon(Icons.trending_up),
               ),
+            if (me?.isBusiness ?? false)
+              IconButton(
+                tooltip: 'Company dashboard',
+                onPressed: () => context.push('/business-dashboard'),
+                icon: const Icon(Icons.insights),
+              ),
+            if (me?.isAdmin ?? false)
+              IconButton(
+                tooltip: 'Platform dashboard',
+                onPressed: () => context.push('/admin-dashboard'),
+                icon: const Icon(Icons.query_stats),
+              ),
             // Stream A addition (§2.6: assistant reachable from the profile
             // screen) — flag to whoever owns this file if it collides.
             IconButton(
