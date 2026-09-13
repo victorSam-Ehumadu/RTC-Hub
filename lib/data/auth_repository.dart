@@ -33,6 +33,7 @@ class AuthRepository {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? studentNumber,
     String? companyName,
     String? industry,
   }) async {
@@ -57,6 +58,7 @@ class AuthRepository {
         'course': ?course,
         'academic_year': ?academicYear,
         if (graduationYear != null) 'graduation_year': '$graduationYear',
+        'student_number': ?studentNumber,
         'company_name': ?companyName,
         'industry': ?industry,
       },

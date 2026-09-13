@@ -23,6 +23,7 @@ class Profile {
     this.talentDescription,
     this.cvUrl,
     this.portfolioUrl,
+    this.verificationPhotoUrl,
     this.profileCompleteness = 0,
     this.visibilityBusiness = true,
     this.visibilityPeers = true,
@@ -47,6 +48,14 @@ class Profile {
   final String? talentDescription;
   final String? cvUrl;
   final String? portfolioUrl;
+
+  /// A signed URL into the private `verification` storage bucket — the
+  /// document an alumnus uploaded as evidence for Stream D's alumni
+  /// verification flow. Null for everyone else, and for an alumnus who
+  /// hasn't completed the upload step yet. Reviewed by an admin against the
+  /// claimed [studentNumber]/[graduationYear]; see
+  /// `docs/alumni-verification-design.md` for the reasoning.
+  final String? verificationPhotoUrl;
   final int profileCompleteness;
   final bool visibilityBusiness;
   final bool visibilityPeers;
@@ -95,6 +104,7 @@ class Profile {
         talentDescription: map['talent_description'] as String?,
         cvUrl: map['cv_url'] as String?,
         portfolioUrl: map['portfolio_url'] as String?,
+        verificationPhotoUrl: map['verification_photo_url'] as String?,
         profileCompleteness: (map['profile_completeness'] as int?) ?? 0,
         visibilityBusiness: (map['visibility_business'] as bool?) ?? true,
         visibilityPeers: (map['visibility_peers'] as bool?) ?? true,
@@ -116,6 +126,7 @@ class Profile {
         'talent_description': talentDescription,
         'cv_url': cvUrl,
         'portfolio_url': portfolioUrl,
+        'verification_photo_url': verificationPhotoUrl,
         'visibility_business': visibilityBusiness,
         'visibility_peers': visibilityPeers,
       };
@@ -134,6 +145,7 @@ class Profile {
     String? talentDescription,
     String? cvUrl,
     String? portfolioUrl,
+    String? verificationPhotoUrl,
     bool? visibilityBusiness,
     bool? visibilityPeers,
   }) =>
@@ -156,6 +168,7 @@ class Profile {
         talentDescription: talentDescription ?? this.talentDescription,
         cvUrl: cvUrl ?? this.cvUrl,
         portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+        verificationPhotoUrl: verificationPhotoUrl ?? this.verificationPhotoUrl,
         profileCompleteness: profileCompleteness,
         visibilityBusiness: visibilityBusiness ?? this.visibilityBusiness,
         visibilityPeers: visibilityPeers ?? this.visibilityPeers,
