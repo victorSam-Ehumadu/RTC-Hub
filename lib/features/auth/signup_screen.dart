@@ -134,7 +134,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           ? '202512345@my.richfield.ac.za'
                           : 'you@company.co.za',
                       helperText: _role == 'STUDENT'
-                          ? 'Richfield address, 9-digit student number'
+                          ? 'Richfield or AAA address, 9-digit student number'
                           : null,
                       helperMaxLines: 2,
                     ),
@@ -142,8 +142,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       final value = v?.trim() ?? '';
                       if (!value.contains('@')) return 'Enter your email address';
                       if (_role == 'STUDENT' && !isValidStudentEmail(value)) {
-                        return 'Must be a @richfield.ac.za address with a '
-                            '9-digit prefix';
+                        return 'Must be a Richfield or AAA student address '
+                            'with a 9-digit prefix';
                       }
                       return null;
                     },

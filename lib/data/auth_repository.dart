@@ -42,7 +42,7 @@ class AuthRepository {
     // instead of Auth's generic "Database error saving new user".
     if (role == 'STUDENT' && !isValidStudentEmail(clean)) {
       throw StateError(
-        'Students must register with a @richfield.ac.za address whose prefix '
+        'Students must register with a Richfield or AAA address whose prefix '
         'is a 9-digit student number.',
       );
     }
