@@ -202,11 +202,14 @@ class _AdminWordmark extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
           ),
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.admin_panel_settings_outlined,
-            size: 36,
-            color: AppColors.danger,
+          clipBehavior: Clip.antiAlias,
+          // The same Richfield mark [LoginScreen]'s `_Wordmark` uses, so the
+          // two sign-in screens read as one brand — only the tint around it
+          // (danger red, not accent green) signals "this is the admin
+          // portal, not the student one".
+          child: Image.asset(
+            'assets/images/Richfield-Logo-square.jpg',
+            fit: BoxFit.cover,
           ),
         ),
         const SizedBox(height: 18),

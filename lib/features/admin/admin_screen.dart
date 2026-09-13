@@ -8,6 +8,7 @@ import '../../data/admin_repository.dart';
 import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../shell/app_shell.dart';
 
 /// Moderation console.
 ///
@@ -35,12 +36,31 @@ class AdminScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
+        // Same banner treatment as `ProfileScreen` and every tab under
+        // `HubAppBar` — the admin portal is a separate app (`main_admin.dart`)
+        // but should still look like part of RTC Hub, not a bare admin panel.
         appBar: AppBar(
-          title: const Text('Admin'),
-          bottom: const TabBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: const HubBanner(),
+          iconTheme: const IconThemeData(color: hubBannerForeground),
+          actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+          title: const Text(
+            'Admin',
+            style: TextStyle(
+              color: hubBannerForeground,
+              fontWeight: FontWeight.w800,
+              shadows: hubBannerTitleShadow,
+            ),
+          ),
+          bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            tabs: [
+            labelColor: hubBannerForeground,
+            unselectedLabelColor: hubBannerForeground.withValues(alpha: 0.62),
+            indicatorColor: AppColors.accent,
+            indicatorWeight: 3,
+            tabs: const [
               Tab(text: 'Overview'),
               Tab(text: 'Accounts'),
               Tab(text: 'Listings'),
@@ -82,15 +102,15 @@ class _OverviewTab extends ConsumerWidget {
         ),
         data: (s) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           children: [
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.7,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 1.35,
               children: [
                 _StatTile(
                   label: 'Users',
@@ -114,7 +134,7 @@ class _OverviewTab extends ConsumerWidget {
                   label: 'Bounties',
                   value: s.bounties,
                   icon: Icons.bolt,
-                  color: AppColors.points,
+                  color: AppColors.button,
                 ),
                 _StatTile(
                   label: 'Listings to review',
@@ -323,22 +343,43 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).colorScheme.outline),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 19, color: color),
-          Text('$value', style: monoStyle(size: 24, weight: FontWeight.w800)),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 19, color: color),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '$value',
+            style: monoStyle(size: 27, weight: FontWeight.w800, color: color),
+          ),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
               color:
                   Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
             ),
@@ -376,12 +417,16 @@ class _PlatformAnalytics extends ConsumerWidget {
         children: [
           const SectionHeader(title: 'Users by type'),
           _CategoryBars(items: d.usersByRole, colorFor: roleColor),
+          const SizedBox(height: 6),
           const SectionHeader(title: 'Monthly active users'),
           _ActiveUsersCard(mau: d.monthlyActiveUsers, totalUsers: d.totalUsers),
+          const SizedBox(height: 6),
           const SectionHeader(title: 'New registrations'),
           _RegistrationsTrend(series: d.registrationsByDay),
+          const SizedBox(height: 6),
           const SectionHeader(title: 'Content volume'),
           _CategoryBars(items: d.contentVolume, colorFor: _contentColor),
+          const SizedBox(height: 6),
           const SectionHeader(title: 'Business approval pipeline'),
           _CategoryBars(items: d.businessPipeline, colorFor: _pipelineColor),
         ],
