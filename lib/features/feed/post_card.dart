@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/video_view.dart';
 import 'edit_post_sheet.dart';
 import '../../widgets/sheet_preview.dart';
 
@@ -151,6 +152,14 @@ class _PostCardState extends ConsumerState<PostCard> {
                   language: _post.codeLanguage,
                   maxLines: 12,
                   runnable: false,
+                ),
+              ],
+
+              if (_post.videoUrl != null) ...[
+                const SizedBox(height: 12),
+                VideoView(
+                  url: _post.videoUrl!,
+                  thumbnailUrl: _post.thumbnailUrl,
                 ),
               ],
 

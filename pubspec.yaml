@@ -61,6 +61,11 @@ dependencies:
   path_provider: ^2.1.6
   # Opening a submission's signed storage URL.
   url_launcher: ^6.3.1
+  # §2.8 rejects raw uploads: video must be compressed/transcoded and
+  # get a thumbnail before storage. video_compress does both, which is
+  # why it is preferred over video_thumbnail (Dart 2 only anyway).
+  video_compress: ^3.1.4
+  video_player: ^2.9.1
 
 dev_dependencies:
   flutter_test:

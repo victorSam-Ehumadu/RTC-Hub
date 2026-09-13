@@ -89,7 +89,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           if (mounted) context.go('/login');
 
         case SignUpOutcome.signedIn:
-          // A session exists, so the redirect takes it from here.
+          // A session exists, so the redirect takes it from here — except
+          // for alumni, who have somewhere specific to be: §2.1's identity
+          // check cannot happen by email, so it happens now.
+          if (_role == 'ALUMNI') {
+            context.go('/verify-alumni');
+            return;
+          }
           showMessage(
             context,
             _role == 'STUDENT'
@@ -139,8 +145,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       padding: const EdgeInsets.only(top: 12),
                       child: _Notice(
                         icon: Icons.info_outline,
-                        text: '$_role accounts are reviewed by an administrator '
-                            'before they can sign in.',
+                        text: _role == 'ALUMNI'
+                            ? 'Your Richfield email has probably closed, so we '
+                                'verify graduates with a document instead. You '
+                                'will be asked for one next.'
+                            : '$_role accounts are reviewed by an '
+                                'administrator before they can sign in.',
                       ),
                     ),
 

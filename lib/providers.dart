@@ -16,12 +16,15 @@ import 'data/post_repository.dart';
 import 'data/profile_repository.dart';
 import 'data/social_repository.dart';
 import 'data/storage_repository.dart';
+import 'data/verification_repository.dart';
+import 'data/video_service.dart';
 import 'models/assistant.dart';
 import 'models/opportunity.dart';
 import 'models/post.dart';
 import 'models/analytics.dart';
 import 'models/portfolio.dart';
 import 'models/profile.dart';
+import 'models/verification.dart';
 import 'models/recommendation.dart';
 import 'models/social.dart';
 
@@ -49,6 +52,9 @@ final codeRunnerProvider = Provider((_) => const CodeRunner());
 /// Export to .xlsx / source files and hand off to Excel, Sheets or an
 /// editor. See `data/document_service.dart`.
 final documentServiceProvider = Provider((_) => const DocumentService());
+
+/// Transcoding and thumbnail generation for short-form video (§2.8).
+final videoServiceProvider = Provider((_) => const VideoService());
 
 // ─── Session and profile ──────────────────────────────────────
 
@@ -455,4 +461,28 @@ final careerPathwayProvider =
 final pathwayCoursesProvider =
     FutureProvider.autoDispose<List<({String course, int alumni})>>((ref) {
   return ref.watch(portfolioRepoProvider).pathwayCourses();
+});
+
+// ─── Alumni identity verification (§2.1) ──────────────────────
+
+final verificationRepoProvider =
+    Provider((_) => const VerificationRepository());
+
+/// The signed-in user's own submission. Null means they have not started;
+/// the account gate keys off this to decide between the form and the
+/// waiting room.
+final myVerificationProvider =
+    FutureProvider.autoDispose<AlumniVerification?>((ref) {
+  ref.watch(authStateProvider);
+  return ref.watch(verificationRepoProvider).mine();
+});
+
+final alumniQueueStatusProvider =
+    StateProvider.autoDispose<String>((_) => 'PENDING');
+
+final alumniQueueProvider =
+    FutureProvider.autoDispose<List<AlumniVerification>>((ref) {
+  return ref
+      .watch(verificationRepoProvider)
+      .queue(status: ref.watch(alumniQueueStatusProvider));
 });

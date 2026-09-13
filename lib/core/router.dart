@@ -7,6 +7,8 @@ import '../features/analytics/admin_dashboard_screen.dart';
 import '../features/analytics/business_dashboard_screen.dart';
 import '../features/analytics/student_dashboard_screen.dart';
 import '../features/assistant/assistant_screen.dart';
+import '../features/admin/alumni_review_screen.dart';
+import '../features/auth/alumni_verification_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
 import '../features/bounty/bounty_screen.dart';
@@ -143,6 +145,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/pathways',
         builder: (_, _) => const CareerPathwayScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/verify-alumni',
+        builder: (_, _) => const AlumniVerificationScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/admin/alumni',
+        builder: (_, _) => const AlumniReviewScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

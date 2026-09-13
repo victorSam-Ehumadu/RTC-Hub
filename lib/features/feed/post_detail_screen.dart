@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../widgets/code_block.dart';
 import '../../widgets/common.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/video_view.dart';
 import '../../widgets/sheet_preview.dart';
 import 'submit_answer_sheet.dart';
 
@@ -547,6 +548,13 @@ class _PostBody extends StatelessWidget {
                 code: post.codeSnippet!,
                 language: post.codeLanguage,
                 title: _fileTitle(post),
+              ),
+            ],
+            if (post.videoUrl != null) ...[
+              const SizedBox(height: 14),
+              VideoView(
+                url: post.videoUrl!,
+                thumbnailUrl: post.thumbnailUrl,
               ),
             ],
             if (post.hasSheet) ...[

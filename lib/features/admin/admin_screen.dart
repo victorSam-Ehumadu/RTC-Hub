@@ -130,6 +130,13 @@ class _OverviewTab extends ConsumerWidget {
               label: const Text('Open the platform dashboard'),
             ),
 
+            const SectionHeader(title: 'Alumni verification'),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/admin/alumni'),
+              icon: const Icon(Icons.verified_outlined, size: 18),
+              label: const Text('Review graduation claims'),
+            ),
+
             const SectionHeader(title: 'Broadcast'),
             FilledButton.icon(
               onPressed: () => _announce(context, ref),

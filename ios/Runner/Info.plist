@@ -11,6 +11,10 @@
 	     not optional. -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>RTC Hub needs access to your photos so you can set a profile picture and attach media to a post.</string>
+	<!-- Recording a short-form video post (§2.4) captures audio too.
+	     iOS terminates the app without this string. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RTC Hub needs the microphone so your video posts have sound.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RTC Hub needs camera access so you can take a profile picture or capture your student card for verification.</string>
 	<key>CFBundleDisplayName</key>
