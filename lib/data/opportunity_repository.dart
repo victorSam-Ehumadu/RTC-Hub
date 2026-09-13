@@ -165,7 +165,22 @@ class EventRepository {
     return rows.map(CampusEvent.fromMap).toList();
   }
 
+  /// Everything, past and future.
+  ///
+  /// `upcoming()` is what students see; an administrator managing events
+  /// needs the ones that have already happened too, if only to delete a
+  /// duplicate after the fact.
+  Future<List<CampusEvent>> all() async {
+    final rows =
+        await db.from('events').select().order('event_date', ascending: false);
+    return rows.map(CampusEvent.fromMap).toList();
+  }
+
   /// Admin only — `events_all_admin` rejects anyone else.
+  ///
+  /// Publishing is the insert: `trg_event_notify` (0009) fans a notification
+  /// out to the matching audience as soon as the row lands, which is why
+  /// there is no separate publish step.
   Future<void> create({
     required String title,
     required DateTime eventDate,
@@ -173,6 +188,7 @@ class EventRepository {
     String? location,
     String? virtualLink,
     List<String>? targetRoles,
+    String? faculty,
   }) =>
       db.from('events').insert({
         'admin_id': requireUserId,
@@ -182,7 +198,30 @@ class EventRepository {
         'location': location,
         'virtual_link': virtualLink,
         'target_roles': targetRoles,
+        'faculty': faculty,
       });
+
+  /// §2.2 asks for edit as well as create — a room change should not mean
+  /// deleting the event and re-notifying everyone.
+  Future<void> update(
+    String id, {
+    required String title,
+    required DateTime eventDate,
+    String? description,
+    String? location,
+    String? virtualLink,
+    List<String>? targetRoles,
+    String? faculty,
+  }) =>
+      db.from('events').update({
+        'title': title.trim(),
+        'event_date': eventDate.toIso8601String(),
+        'description': description,
+        'location': location,
+        'virtual_link': virtualLink,
+        'target_roles': targetRoles,
+        'faculty': faculty,
+      }).eq('id', id);
 
   Future<void> remove(String id) => db.from('events').delete().eq('id', id);
 }

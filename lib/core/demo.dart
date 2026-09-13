@@ -1331,13 +1331,7 @@ class DemoEventRepository extends EventRepository {
   const DemoEventRepository();
 
   @override
-  Future<List<CampusEvent>> upcoming() async =>
-      demoEvents.where((e) => !e.isPast).toList()
-        ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
-
-  @override
-  Future<List<CampusEvent>> past({int limit = 20}) async =>
-      demoEvents.where((e) => e.isPast).take(limit).toList();
+  Future<List<CampusEvent>> all() async => List.of(demoEvents);
 
   @override
   Future<void> create({
@@ -1347,6 +1341,7 @@ class DemoEventRepository extends EventRepository {
     String? location,
     String? virtualLink,
     List<String>? targetRoles,
+    String? faculty,
   }) async {
     demoEvents.add(CampusEvent(
       id: 'e-${DateTime.now().millisecondsSinceEpoch}',
@@ -1356,7 +1351,34 @@ class DemoEventRepository extends EventRepository {
       location: location,
       virtualLink: virtualLink,
       targetRoles: targetRoles ?? const [],
+      faculty: faculty,
     ));
+    _ping();
+  }
+
+  @override
+  Future<void> update(
+    String id, {
+    required String title,
+    required DateTime eventDate,
+    String? description,
+    String? location,
+    String? virtualLink,
+    List<String>? targetRoles,
+    String? faculty,
+  }) async {
+    final i = demoEvents.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    demoEvents[i] = CampusEvent(
+      id: id,
+      title: title.trim(),
+      eventDate: eventDate,
+      description: description,
+      location: location,
+      virtualLink: virtualLink,
+      targetRoles: targetRoles ?? const [],
+      faculty: faculty,
+    );
     _ping();
   }
 
@@ -1365,6 +1387,16 @@ class DemoEventRepository extends EventRepository {
     demoEvents.removeWhere((e) => e.id == id);
     _ping();
   }
+
+  @override
+  Future<List<CampusEvent>> upcoming() async =>
+      demoEvents.where((e) => !e.isPast).toList()
+        ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+
+  @override
+  Future<List<CampusEvent>> past({int limit = 20}) async =>
+      demoEvents.where((e) => e.isPast).take(limit).toList();
+
 }
 
 class DemoAdminRepository extends AdminRepository {

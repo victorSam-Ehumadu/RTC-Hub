@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import 'admin_events_tab.dart';
 
 /// Moderation console.
 ///
@@ -30,7 +31,7 @@ class AdminScreen extends ConsumerWidget {
     }
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Admin'),
@@ -41,6 +42,7 @@ class AdminScreen extends ConsumerWidget {
               Tab(text: 'Overview'),
               Tab(text: 'Accounts'),
               Tab(text: 'Listings'),
+              Tab(text: 'Events'),
               Tab(text: 'Flags'),
             ],
           ),
@@ -50,6 +52,7 @@ class AdminScreen extends ConsumerWidget {
             _OverviewTab(),
             _AccountsTab(),
             _ListingsTab(),
+            AdminEventsTab(),
             _FlagsTab(),
           ],
         ),

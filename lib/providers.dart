@@ -304,6 +304,12 @@ final upcomingEventsProvider =
   return ref.watch(eventRepoProvider).upcoming();
 });
 
+/// Past and future, for the administrator's management tab.
+final allEventsProvider =
+    FutureProvider.autoDispose<List<CampusEvent>>((ref) {
+  return ref.watch(eventRepoProvider).all();
+});
+
 // ─── Admin and analytics ──────────────────────────────────────
 
 final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) {

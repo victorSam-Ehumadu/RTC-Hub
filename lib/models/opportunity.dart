@@ -151,6 +151,7 @@ class CampusEvent {
     this.location,
     this.virtualLink,
     this.targetRoles = const [],
+    this.faculty,
   });
 
   final String id;
@@ -160,6 +161,10 @@ class CampusEvent {
   final String? location;
   final String? virtualLink;
   final List<String> targetRoles;
+
+  /// Which faculty this event is for. Null reaches both — added by
+  /// migration 0007, which also made events_select honour it.
+  final String? faculty;
 
   bool get isPast => eventDate.isBefore(DateTime.now());
   bool get isVirtual => virtualLink != null && virtualLink!.isNotEmpty;
@@ -173,5 +178,6 @@ class CampusEvent {
         location: map['location'] as String?,
         virtualLink: map['virtual_link'] as String?,
         targetRoles: (map['target_roles'] as List?)?.cast<String>() ?? const [],
+        faculty: map['faculty'] as String?,
       );
 }
