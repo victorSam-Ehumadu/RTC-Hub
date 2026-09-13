@@ -1328,6 +1328,12 @@ class DemoAdminRepository extends AdminRepository {
   }
 
   @override
+  Future<void> confirmEmail(String userId) async {}
+
+  @override
+  Future<void> resetPassword(String userId, String newPassword) async {}
+
+  @override
   Future<void> announce({
     required String title,
     required String body,

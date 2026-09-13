@@ -91,6 +91,26 @@ class AdminRepository {
     }).eq('id', flagId);
   }
 
+  /// Confirms a signup email without the confirmation link — for accounts
+  /// an admin has otherwise verified (a bounced inbox, a spam-filtered
+  /// institutional address, a seeded test account). `admin_confirm_email`
+  /// (migration 0014) writes `auth.users.email_confirmed_at` directly,
+  /// something no RLS policy or client write could ever reach, and logs
+  /// the action to `admin_account_actions`.
+  Future<void> confirmEmail(String userId) =>
+      db.rpc('admin_confirm_email', params: {'p_user_id': userId});
+
+  /// Sets a new password directly, bypassing the reset-email flow — same
+  /// "can't reach the inbox" cases as [confirmEmail]. `admin_reset_password`
+  /// (migration 0014) refuses a password under 8 characters, refuses to
+  /// target another administrator's account, and revokes the account's
+  /// existing sessions so the old password stops working immediately.
+  Future<void> resetPassword(String userId, String newPassword) =>
+      db.rpc('admin_reset_password', params: {
+        'p_user_id': userId,
+        'p_new_password': newPassword,
+      });
+
   Future<void> announce({
     required String title,
     required String body,

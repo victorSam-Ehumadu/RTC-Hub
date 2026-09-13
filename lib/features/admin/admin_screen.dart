@@ -168,46 +168,75 @@ class _OverviewTab extends ConsumerWidget {
               icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
               label: const Text('Add an administrator'),
             ),
+            const SectionHeader(title: 'Account tools'),
+            OutlinedButton.icon(
+              onPressed: () => _confirmEmail(context, ref),
+              icon: const Icon(Icons.mark_email_read_outlined, size: 18),
+              label: const Text('Confirm an email'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => _resetPassword(context, ref),
+              icon: const Icon(Icons.password_outlined, size: 18),
+              label: const Text('Reset a password'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Looks up an existing account by email, confirms, then grants ADMIN.
+  /// Looks up an account by email — shared by [_addAdmin], [_confirmEmail]
+  /// and [_resetPassword], since all three act on a real account and acting
+  /// on the wrong one from a typo'd email is the one mistake worth an extra
+  /// click to avoid. `null` means either the dialog was cancelled or no
+  /// account matched (the latter already shown as a message).
   ///
-  /// Deliberately two steps rather than one dialog: promoting the wrong
-  /// account by a typo'd email is the one mistake here worth an extra click
-  /// to avoid.
-  Future<void> _addAdmin(BuildContext context, WidgetRef ref) async {
+  /// The dialog's own `Navigator.pop` calls are deferred a frame (see
+  /// `close`) rather than fired synchronously from the autofocused field's
+  /// `onSubmitted` — popping in the same frame as that field's focus
+  /// teardown is what caused the blank-screen bug fixed for the "Add a
+  /// skill" dialog (profile_screen.dart); the same shape here gets the same
+  /// fix up front instead of waiting to hit it again.
+  Future<Profile?> _lookupByEmail(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String hint,
+  }) async {
     final email = TextEditingController();
+
+    void close(BuildContext dialogContext, [Profile? value]) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
+      });
+    }
 
     final found = await showDialog<Profile?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Add an administrator'),
+        title: Text(title),
         content: TextField(
           controller: email,
           autofocus: true,
           keyboardType: TextInputType.emailAddress,
-          onSubmitted: (_) => Navigator.pop(dialogContext),
-          decoration: const InputDecoration(
-            labelText: 'Their account email',
-            hintText: 'name@richfield.ac.za',
+          onSubmitted: (_) => close(dialogContext),
+          decoration: InputDecoration(
+            labelText: 'Account email',
+            hintText: hint,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => close(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () async {
               final profile =
                   await ref.read(adminRepoProvider).findByEmail(email.text);
-              if (dialogContext.mounted) {
-                Navigator.pop(dialogContext, profile);
-              }
+              if (!dialogContext.mounted) return;
+              close(dialogContext, profile);
             },
             child: const Text('Look up'),
           ),
@@ -217,15 +246,21 @@ class _OverviewTab extends ConsumerWidget {
     final emailText = email.text;
     email.dispose();
 
-    if (found == null) {
-      if (context.mounted) {
-        showMessage(
-          context,
-          'No account found for "$emailText".',
-        );
-      }
-      return;
+    if (found == null && context.mounted) {
+      showMessage(context, 'No account found for "$emailText".');
     }
+    return found;
+  }
+
+  /// Looks up an existing account by email, confirms, then grants ADMIN.
+  Future<void> _addAdmin(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Add an administrator',
+      hint: 'name@richfield.ac.za',
+    );
+    if (found == null || !context.mounted) return;
     if (found.isAdmin) {
       if (context.mounted) {
         showMessage(context, '${found.displayName} is already an administrator.');
@@ -265,6 +300,119 @@ class _OverviewTab extends ConsumerWidget {
         ..invalidate(adminDashboardProvider);
       if (context.mounted) {
         showMessage(context, '${found.displayName} is now an administrator.');
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  /// Looks up an account by email, then confirms its signup email without
+  /// the inbox link — see `admin_confirm_email` (migration 0014). For a
+  /// bounced or spam-filtered confirmation email, or a seeded test account.
+  Future<void> _confirmEmail(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Confirm an email',
+      hint: "The account's email",
+    );
+    if (found == null || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm this email?'),
+        content: Text(
+          '${found.displayName} (${found.email}) will be able to sign in '
+          "without clicking the link in their inbox.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm email'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(adminRepoProvider).confirmEmail(found.id);
+      if (context.mounted) {
+        showMessage(context, "${found.displayName}'s email is confirmed.");
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  /// Looks up an account by email, then sets a new password directly — see
+  /// `admin_reset_password` (migration 0014). Same "can't reach the inbox"
+  /// cases as [_confirmEmail]; the account's existing sessions are revoked
+  /// as part of the reset, so tell them the new password out of band.
+  Future<void> _resetPassword(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Reset a password',
+      hint: "The account's email",
+    );
+    if (found == null || !context.mounted) return;
+
+    final password = TextEditingController();
+    void close(BuildContext dialogContext, [String? value]) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
+      });
+    }
+
+    final newPassword = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('New password for ${found.displayName}'),
+        content: TextField(
+          controller: password,
+          autofocus: true,
+          obscureText: true,
+          onSubmitted: (v) => close(dialogContext, v),
+          decoration: const InputDecoration(
+            labelText: 'New password',
+            helperText: 'At least 8 characters. This signs them out '
+                'everywhere else — share the new password out of band.',
+            helperMaxLines: 2,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => close(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => close(dialogContext, password.text),
+            child: const Text('Set password'),
+          ),
+        ],
+      ),
+    );
+    password.dispose();
+
+    if (newPassword == null) return;
+    if (newPassword.length < 8) {
+      if (context.mounted) {
+        showMessage(context, 'Password must be at least 8 characters.');
+      }
+      return;
+    }
+
+    try {
+      await ref.read(adminRepoProvider).resetPassword(found.id, newPassword);
+      if (context.mounted) {
+        showMessage(context, "${found.displayName}'s password is reset.");
       }
     } catch (error) {
       if (context.mounted) showError(context, error);
