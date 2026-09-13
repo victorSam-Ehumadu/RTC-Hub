@@ -67,3 +67,8 @@ env.json
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Pods/
 **/ios/.symlinks/
+
+# Scratch scripts used while patching; never part of the app.
+.patch*.py
+.fixdialogs.py
+.resolve.py
