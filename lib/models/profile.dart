@@ -34,6 +34,14 @@ class Profile {
     this.companySize,
     this.foundedYear,
     this.sectionVisibility = const {},
+    this.campus,
+    this.enrolmentYear,
+    this.fieldOfWork,
+    this.githubUrl,
+    this.linkedinUrl,
+    this.credlyUrl,
+    this.careerInterests,
+    this.companyDescription,
     this.createdAt,
   });
 
@@ -81,6 +89,23 @@ class Profile {
   /// this map is only ever populated for your own profile.
   final Map<String, bool> sectionVisibility;
 
+  // §2.3 asks for each of these by name.
+  final String? campus;
+  final int? enrolmentYear;
+
+  /// The alumni counterpart to [course] — §2.3 wants "programme of
+  /// study (students) or current field of work (alumni)".
+  final String? fieldOfWork;
+
+  final String? githubUrl;
+  final String? linkedinUrl;
+  final String? credlyUrl;
+  final String? careerInterests;
+
+  /// What the company does, as distinct from [talentDescription], which
+  /// is who it wants to hire. §2.3 asks for both.
+  final String? companyDescription;
+
   final DateTime? createdAt;
 
   bool get isStudent => role == 'STUDENT';
@@ -121,8 +146,13 @@ class Profile {
   /// Line under the name: course for students, industry for businesses.
   String get subtitle {
     if (isBusiness) return industry ?? 'Business';
-    final bits = [course, academicYear].where((b) => b != null && b.isNotEmpty);
-    return bits.isEmpty ? role : bits.join(' · ');
+    // §2.3: programme of study for students, current field of work for
+    // alumni — a graduate's course matters less than what they do now.
+    final bits = isAlumni
+        ? [fieldOfWork ?? course, if (graduationYear != null) "class of $graduationYear"]
+        : [course, academicYear];
+    final kept = bits.where((b) => b != null && b.isNotEmpty);
+    return kept.isEmpty ? role : kept.join(' · ');
   }
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -156,6 +186,14 @@ class Profile {
         contactPhone: map['contact_phone'] as String?,
         companySize: map['company_size'] as String?,
         foundedYear: map['founded_year'] as int?,
+        campus: map['campus'] as String?,
+        enrolmentYear: (map['enrolment_year'] as num?)?.toInt(),
+        fieldOfWork: map['field_of_work'] as String?,
+        githubUrl: map['github_url'] as String?,
+        linkedinUrl: map['linkedin_url'] as String?,
+        credlyUrl: map['credly_url'] as String?,
+        careerInterests: map['career_interests'] as String?,
+        companyDescription: map['company_description'] as String?,
         sectionVisibility: map['section_visibility'] is Map
             ? {
                 for (final e in (map['section_visibility'] as Map).entries)
@@ -193,6 +231,14 @@ class Profile {
         'company_size': companySize,
         'founded_year': foundedYear,
         'section_visibility': sectionVisibility,
+        'campus': campus,
+        'enrolment_year': enrolmentYear,
+        'field_of_work': fieldOfWork,
+        'github_url': githubUrl,
+        'linkedin_url': linkedinUrl,
+        'credly_url': credlyUrl,
+        'career_interests': careerInterests,
+        'company_description': companyDescription,
       };
 
   Profile copyWith({
@@ -219,6 +265,14 @@ class Profile {
     String? companySize,
     int? foundedYear,
     Map<String, bool>? sectionVisibility,
+    String? campus,
+    int? enrolmentYear,
+    String? fieldOfWork,
+    String? githubUrl,
+    String? linkedinUrl,
+    String? credlyUrl,
+    String? careerInterests,
+    String? companyDescription,
   }) =>
       Profile(
         id: id,
@@ -250,6 +304,14 @@ class Profile {
         companySize: companySize ?? this.companySize,
         foundedYear: foundedYear ?? this.foundedYear,
         sectionVisibility: sectionVisibility ?? this.sectionVisibility,
+        campus: campus ?? this.campus,
+        enrolmentYear: enrolmentYear ?? this.enrolmentYear,
+        fieldOfWork: fieldOfWork ?? this.fieldOfWork,
+        githubUrl: githubUrl ?? this.githubUrl,
+        linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+        credlyUrl: credlyUrl ?? this.credlyUrl,
+        careerInterests: careerInterests ?? this.careerInterests,
+        companyDescription: companyDescription ?? this.companyDescription,
         createdAt: createdAt,
       );
 }

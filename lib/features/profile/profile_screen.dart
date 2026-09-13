@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import 'portfolio_sections.dart';
 import 'recommendations_section.dart';
 import '../../widgets/skeleton.dart';
 import '../feed/post_card.dart';
@@ -72,6 +73,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 tooltip: 'Admin',
                 onPressed: () => context.push('/admin'),
                 icon: const Icon(Icons.admin_panel_settings_outlined),
+              ),
+            if ((me?.isStudent ?? false) || (me?.isAlumni ?? false))
+              IconButton(
+                tooltip: 'Where graduates go',
+                onPressed: () => context.push('/pathways'),
+                icon: const Icon(Icons.timeline_outlined),
               ),
             if ((me?.isStudent ?? false) || (me?.isAlumni ?? false))
               IconButton(
@@ -153,7 +160,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
                 _SkillsSection(userId: p.id, isSelf: isSelf),
                 _ExperienceSection(userId: p.id, isSelf: isSelf),
-                RecommendationsSection(
+                PortfolioSections(userId: p.id, isSelf: isSelf),
+              RecommendationsSection(
                   userId: p.id,
                   isSelf: isSelf,
                   subjectName: p.fullName.split(' ').first,

@@ -24,6 +24,7 @@ import '../features/opportunities/create_opportunity_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/profile/edit_profile_screen.dart';
 import '../features/profile/leaderboard_screen.dart';
+import '../features/profile/career_pathway_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/saved/saved_screen.dart';
 import '../features/search/search_screen.dart';
@@ -137,6 +138,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/business-dashboard',
         builder: (_, _) => const BusinessDashboardScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/pathways',
+        builder: (_, _) => const CareerPathwayScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,

@@ -11,6 +11,7 @@ import 'data/document_service.dart';
 import 'data/engagement_repository.dart';
 import 'data/auth_repository.dart';
 import 'data/opportunity_repository.dart';
+import 'data/portfolio_repository.dart';
 import 'data/post_repository.dart';
 import 'data/profile_repository.dart';
 import 'data/social_repository.dart';
@@ -19,6 +20,7 @@ import 'models/assistant.dart';
 import 'models/opportunity.dart';
 import 'models/post.dart';
 import 'models/analytics.dart';
+import 'models/portfolio.dart';
 import 'models/profile.dart';
 import 'models/recommendation.dart';
 import 'models/social.dart';
@@ -409,4 +411,48 @@ final businessDashboardProvider =
   return ref
       .watch(businessAnalyticsRepoProvider)
       .dashboard(days: ref.watch(dashboardRangeProvider));
+});
+
+// ─── Portfolio sections (§2.3) and career pathways (§2.5) ─────
+
+final portfolioRepoProvider = Provider((_) => const PortfolioRepository());
+
+/// Keyed `"<userId>|<kind>"` — a Riverpod family takes one argument, and the
+/// same convention is already used by commentSectionProvider.
+final portfolioItemsProvider = FutureProvider.autoDispose
+    .family<List<PortfolioItem>, String>((ref, key) {
+  final parts = key.split('|');
+  return ref.watch(portfolioRepoProvider).items(parts.first, kind: parts.last);
+});
+
+final credentialsProvider = FutureProvider.autoDispose
+    .family<List<Credential>, String>((ref, key) {
+  final parts = key.split('|');
+  return ref
+      .watch(portfolioRepoProvider)
+      .credentials(parts.first, kind: parts.last);
+});
+
+final highlightsProvider = FutureProvider.autoDispose
+    .family<List<ProfileHighlight>, String>((ref, key) {
+  final parts = key.split('|');
+  return ref
+      .watch(portfolioRepoProvider)
+      .highlights(parts.first, kind: parts.last);
+});
+
+/// Which programme the pathway explorer is showing. Null means the caller's
+/// own, which is what the screen opens on.
+final pathwayCourseProvider = StateProvider.autoDispose<String?>((_) => null);
+
+final careerPathwayProvider =
+    FutureProvider.autoDispose<List<CareerPathwayEntry>>((ref) {
+  return ref
+      .watch(portfolioRepoProvider)
+      .pathway(course: ref.watch(pathwayCourseProvider));
+});
+
+final pathwayCoursesProvider =
+    FutureProvider.autoDispose<List<({String course, int alumni})>>((ref) {
+  return ref.watch(portfolioRepoProvider).pathwayCourses();
 });

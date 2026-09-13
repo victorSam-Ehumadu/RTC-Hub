@@ -36,6 +36,24 @@ List<String> coursesForFaculty(String? code) =>
 /// signup trigger rejects it.
 const kSignupRoles = <String>['STUDENT', 'ALUMNI', 'BUSINESS'];
 
+/// Richfield campuses, for the profile's "campus attended" field
+/// (§2.3). A list rather than an enum in the database: campuses open,
+/// close and get renamed, and none of that should need a migration.
+const kCampuses = <String>[
+  'Johannesburg (Braamfontein)',
+  'Johannesburg (Randburg)',
+  'Pretoria',
+  'Durban (Umhlanga)',
+  'Durban (Central)',
+  'Pietermaritzburg',
+  'Cape Town',
+  'Port Elizabeth',
+  'East London',
+  'Polokwane',
+  'Nelspruit',
+  'Online / Distance',
+];
+
 const kAcademicYears = <String>['1st Year', '2nd Year', '3rd Year', 'Alumni'];
 
 const kOpportunityTypes = <String>[

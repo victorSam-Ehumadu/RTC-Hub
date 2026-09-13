@@ -20,6 +20,14 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _headline = TextEditingController();
+  final _github = TextEditingController();
+  final _linkedin = TextEditingController();
+  final _credly = TextEditingController();
+  final _careerInterests = TextEditingController();
+  final _fieldOfWork = TextEditingController();
+  final _companyDescription = TextEditingController();
+  String? _campus;
+  int? _enrolmentYear;
   final _website = TextEditingController();
   final _contactEmail = TextEditingController();
   final _contactPhone = TextEditingController();
@@ -51,6 +59,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _headline.dispose();
+    _github.dispose();
+    _linkedin.dispose();
+    _credly.dispose();
+    _careerInterests.dispose();
+    _fieldOfWork.dispose();
+    _companyDescription.dispose();
     _website.dispose();
     _contactEmail.dispose();
     _contactPhone.dispose();
@@ -106,6 +120,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               visibilityBusiness: _visibleToBusiness,
               visibilityPeers: _visibleToPeers,
               sectionVisibility: _sections,
+              campus: _campus,
+              enrolmentYear: _enrolmentYear,
+              githubUrl: _github.text.trim().isEmpty
+                  ? null
+                  : _github.text.trim(),
+              linkedinUrl: _linkedin.text.trim().isEmpty
+                  ? null
+                  : _linkedin.text.trim(),
+              credlyUrl: _credly.text.trim().isEmpty
+                  ? null
+                  : _credly.text.trim(),
+              careerInterests: _careerInterests.text.trim().isEmpty
+                  ? null
+                  : _careerInterests.text.trim(),
+              fieldOfWork: _fieldOfWork.text.trim().isEmpty
+                  ? null
+                  : _fieldOfWork.text.trim(),
+              companyDescription: _companyDescription.text.trim().isEmpty
+                  ? null
+                  : _companyDescription.text.trim(),
               headline: _headline.text.trim().isEmpty
                   ? null
                   : _headline.text.trim(),
@@ -157,6 +191,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _visibleToPeers = me.visibilityPeers;
       _sections = Map<String, bool>.from(me.sectionVisibility);
       _headline.text = me.headline ?? '';
+      _github.text = me.githubUrl ?? '';
+      _linkedin.text = me.linkedinUrl ?? '';
+      _credly.text = me.credlyUrl ?? '';
+      _careerInterests.text = me.careerInterests ?? '';
+      _fieldOfWork.text = me.fieldOfWork ?? '';
+      _companyDescription.text = me.companyDescription ?? '';
+      _campus = me.campus;
+      _enrolmentYear = me.enrolmentYear;
       _website.text = me.websiteUrl ?? '';
       _contactEmail.text = me.contactEmail ?? '';
       _contactPhone.text = me.contactPhone ?? '';
@@ -298,6 +340,40 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ],
 
+          const SectionHeader(title: 'Campus and dates'),
+          DropdownButtonFormField<String>(
+            initialValue: kCampuses.contains(_campus) ? _campus : null,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Campus attended'),
+            items: [
+              for (final c in kCampuses)
+                DropdownMenuItem(value: c, child: Text(c)),
+            ],
+            onChanged: (v) => setState(() => _campus = v),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            initialValue: _enrolmentYear,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Year of enrolment'),
+            items: [
+              for (var y = DateTime.now().year; y >= DateTime.now().year - 20; y--)
+                DropdownMenuItem(value: y, child: Text('$y')),
+            ],
+            onChanged: (v) => setState(() => _enrolmentYear = v),
+          ),
+          const SizedBox(height: 12),
+          // §2.3 asks alumni for their current field of work where students
+          // give a programme of study.
+          TextFormField(
+            controller: _fieldOfWork,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Current field of work',
+              helperText: 'Alumni — what you do now',
+            ),
+          ),
+
           const SectionHeader(title: 'Headline'),
           TextFormField(
             controller: _headline,
@@ -306,6 +382,48 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             decoration: const InputDecoration(
               hintText: '3rd year BSc IT, looking for an internship',
               counterText: '',
+            ),
+          ),
+
+          const SectionHeader(title: 'Career interests'),
+          TextFormField(
+            controller: _careerInterests,
+            minLines: 2,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'What kind of work are you aiming at?',
+            ),
+          ),
+
+          const SectionHeader(title: 'Professional links'),
+          TextFormField(
+            controller: _github,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'GitHub profile',
+              hintText: 'https://github.com/yourname',
+              prefixIcon: Icon(Icons.code, size: 18),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _linkedin,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'LinkedIn',
+              hintText: 'https://linkedin.com/in/yourname',
+              prefixIcon: Icon(Icons.business_center_outlined, size: 18),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _credly,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Credly badge profile',
+              hintText: 'https://credly.com/users/yourname',
+              prefixIcon: Icon(Icons.military_tech_outlined, size: 18),
             ),
           ),
 
@@ -328,6 +446,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             decoration: const InputDecoration(
               labelText: 'Website',
               hintText: 'https://',
+            ),
+          ),
+
+          const SectionHeader(title: 'About the company'),
+          TextFormField(
+            controller: _companyDescription,
+            minLines: 3,
+            maxLines: 6,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'What does the organisation do?',
+              helperText: 'Businesses — separate from the talent you seek',
             ),
           ),
 
