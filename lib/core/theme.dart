@@ -169,7 +169,7 @@ ThemeData _build({required bool dark}) {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: surface,
+      backgroundColor: dark ? AppColors.darkBg : const Color(0xFFEBEBEB),
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       // Flutter's own default for the selected icon/label is
