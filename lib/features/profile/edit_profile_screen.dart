@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
@@ -61,12 +62,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       imageQuality: 85,
     );
     if (picked == null) return;
+    if (!mounted) return;
+
+    // Crop the image to a square
+    final primary = Theme.of(context).colorScheme.primary;
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Profile Picture',
+          toolbarColor: primary,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Crop Profile Picture',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+
+    if (cropped == null) return;
+    if (!mounted) return;
 
     setState(() => _uploading = true);
     try {
       final url = await ref
           .read(storageRepoProvider)
-          .upload(File(picked.path), bucket: StorageRepository.avatars);
+          .upload(File(cropped.path), bucket: StorageRepository.avatars);
       setState(() => _avatarUrl = url);
     } catch (error) {
       if (mounted) showError(context, error);

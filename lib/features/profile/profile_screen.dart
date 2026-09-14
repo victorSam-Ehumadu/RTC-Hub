@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/profile_utils.dart';
+
 import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../providers.dart';
@@ -128,7 +130,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
             children: [
               _Header(profile: p, isSelf: isSelf),
-              if (isSelf) _CompletenessBar(profile: p),
+              if (isSelf) _CompletenessBar(profile: p, userId: p.id),
               if (!isSelf) _ConnectRow(profile: p),
               // ─── IDENTITY & SUMMARY ────────────────────────
               if (p.bio != null && p.bio!.isNotEmpty) ...[
@@ -271,13 +273,14 @@ class _Header extends ConsumerWidget {
 
 /// Nudges the user to finish their profile. The score is computed by
 /// `profiles_before_update()`, so it is always in step with the data.
-class _CompletenessBar extends StatelessWidget {
-  const _CompletenessBar({required this.profile});
+class _CompletenessBar extends ConsumerWidget {
+  const _CompletenessBar({required this.profile, required this.userId});
 
   final Profile profile;
+  final String userId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (profile.profileCompleteness >= 100) return const SizedBox.shrink();
 
     return Padding(
@@ -298,7 +301,7 @@ class _CompletenessBar extends StatelessWidget {
                   minimumSize: const Size(0, 28),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                onPressed: () => context.push('/edit-profile'),
+                onPressed: () => _showCompletenessBreakdown(context, ref),
                 child: const Text('Improve'),
               ),
             ],
@@ -316,6 +319,79 @@ class _CompletenessBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCompletenessBreakdown(BuildContext context, WidgetRef ref) {
+    final skillsAsync = ref.watch(skillsProvider(userId));
+
+    skillsAsync.when(
+      loading: () => showDialog(
+        context: context,
+        builder: (_) => const Center(child: Loading()),
+      ),
+      error: (err, _) => showError(context, err),
+      data: (skillList) {
+        final missing = getMissingProfileComponents(profile, skillList);
+
+        showModalBottomSheet(
+          context: context,
+          builder: (_) => DraggableScrollableSheet(
+            expand: false,
+            builder: (_, scrollController) => ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  'Complete Your Profile',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                if (missing.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Your profile is complete! 🎉',
+                      style: TextStyle(
+                        color: AppColors.success,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${missing.length} ${missing.length == 1 ? 'item' : 'items'} to add:',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      for (final item in missing)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.add_circle_outline, size: 20),
+                            title: Text(item),
+                            trailing: const Icon(Icons.arrow_forward, size: 18),
+                            onTap: () {
+                              Navigator.pop(context);
+                              context.push('/edit-profile');
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
