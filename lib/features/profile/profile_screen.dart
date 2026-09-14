@@ -84,37 +84,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (isSelf) ...[
             if (me?.isAdmin ?? false)
               IconButton(
-                tooltip: 'Admin',
+                tooltip: 'Admin Console - Manage users and content',
                 onPressed: () => context.push('/admin'),
                 icon: const Icon(Icons.admin_panel_settings_outlined),
               ),
             if ((me?.isStudent ?? false) || (me?.isAlumni ?? false))
               IconButton(
-                tooltip: 'Dashboard',
+                tooltip: 'Dashboard - View your stats and progress',
                 onPressed: () => context.push('/dashboard'),
                 icon: const Icon(Icons.trending_up),
               ),
             // Stream A addition (§2.6: assistant reachable from the profile
             // screen) — flag to whoever owns this file if it collides.
             IconButton(
-              tooltip: 'Assistant',
+              tooltip: 'AI Assistant - Ask for help and guidance',
               onPressed: () => context.push('/assistant'),
               icon: const Icon(Icons.smart_toy_outlined),
             ),
             IconButton(
-              tooltip: 'Light/Dark',
+              tooltip: 'Toggle light/dark mode',
               onPressed: _toggleTheme,
               icon: MediaQuery.of(context).platformBrightness == Brightness.dark
                   ? const Icon(Icons.light_mode)
                   : const Icon(Icons.dark_mode),
             ),
             IconButton(
-              tooltip: 'Edit',
+              tooltip: 'Edit Profile - Update your information',
               onPressed: () => context.push('/edit-profile'),
               icon: const Icon(Icons.edit_outlined),
             ),
             IconButton(
-              tooltip: 'Sign out',
+              tooltip: 'Sign out - Log out of your account',
               onPressed: () async {
                 await ref.read(authRepoProvider).signOut();
                 if (context.mounted) context.go('/login');
