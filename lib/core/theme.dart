@@ -167,7 +167,11 @@ ThemeData _build({required bool dark}) {
     chipTheme: ChipThemeData(
       backgroundColor: surface,
       side: BorderSide(color: border),
-      labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+      labelStyle: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.accent,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
