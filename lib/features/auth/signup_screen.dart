@@ -67,30 +67,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
       if (!mounted) return;
 
-      if (_role == 'STUDENT') {
-        // Students are ACTIVE immediately, and signUp already left us with a
-        // session, so the router will move to the feed on its own.
-        showMessage(context, 'Welcome to RTC Hub.');
-      } else if (_role == 'ALUMNI') {
-        // If handle_new_user() found a matching past STUDENT record, the
-        // account is already ACTIVE and the router/AppShell will move on by
-        // themselves. Otherwise it's PENDING, and the (optional) document
-        // upload lives on AccountGateScreen — not here, since the router
-        // redirects away from /signup the instant a session exists, leaving
-        // no window to run a second step on this screen.
-        showMessage(
-          context,
-          'Registration submitted. If we can verify your details '
-          'automatically you\'ll be approved right away — otherwise an '
-          'admin will review you, and you can optionally upload a document '
-          'to help with that.',
-        );
-      } else {
-        showMessage(
-          context,
-          'Registration submitted. An administrator will review your account.',
-        );
-      }
+      // Show post-signup loading screen for all roles before routing to feed/profile
+      context.go('/post-signup-loading');
     } catch (error) {
       if (mounted) showError(context, error);
     } finally {
