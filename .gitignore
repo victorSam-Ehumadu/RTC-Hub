@@ -67,3 +67,7 @@ env.json
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Pods/
 **/ios/.symlinks/
+
+local.properties
+
+.env

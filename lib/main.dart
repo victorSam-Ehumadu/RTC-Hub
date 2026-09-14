@@ -7,9 +7,12 @@ import 'core/demo.dart';
 import 'core/env.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  dotenv.load(fileName: ".env");
+  runApp(RtcHubApp());
 
   timeago.setLocaleMessages('en_short', timeago.EnShortMessages());
 
@@ -69,15 +72,17 @@ class _SetupNeededApp extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.settings_ethernet,
-                    size: 48, color: AppColors.accent),
+                const Icon(
+                  Icons.settings_ethernet,
+                  size: 48,
+                  color: AppColors.accent,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   'Supabase is not configured',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(

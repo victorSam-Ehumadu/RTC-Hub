@@ -13,6 +13,7 @@ class Profile {
     this.studentNumber,
     this.avatarUrl,
     this.bio,
+    this.studentInvolvement,
     this.faculty,
     this.course,
     this.academicYear,
@@ -37,6 +38,7 @@ class Profile {
   final String? studentNumber;
   final String? avatarUrl;
   final String? bio;
+  final String? studentInvolvement;
   final String? faculty;
   final String? course;
   final String? academicYear;
@@ -85,6 +87,7 @@ class Profile {
         studentNumber: map['student_number'] as String?,
         avatarUrl: map['avatar_url'] as String?,
         bio: map['bio'] as String?,
+        studentInvolvement: map['student_involvement'] as String?,
         faculty: map['faculty'] as String?,
         course: map['course'] as String?,
         academicYear: map['academic_year'] as String?,
@@ -105,6 +108,7 @@ class Profile {
   Map<String, dynamic> toUpdate() => {
         'full_name': fullName,
         'bio': bio,
+        'student_involvement': studentInvolvement,
         'avatar_url': avatarUrl,
         'faculty': faculty,
         'course': course,
@@ -124,6 +128,7 @@ class Profile {
     String? fullName,
     String? avatarUrl,
     String? bio,
+    String? studentInvolvement,
     String? faculty,
     String? course,
     String? academicYear,
@@ -146,6 +151,7 @@ class Profile {
         studentNumber: studentNumber,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         bio: bio ?? this.bio,
+        studentInvolvement: studentInvolvement ?? this.studentInvolvement,
         faculty: faculty ?? this.faculty,
         course: course ?? this.course,
         academicYear: academicYear ?? this.academicYear,

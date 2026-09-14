@@ -118,6 +118,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SectionHeader(title: 'About'),
                 Text(p.bio!, style: const TextStyle(height: 1.5)),
               ],
+              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty) ...[
+                const SectionHeader(title: 'Student Involvement'),
+                Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
+              ],
               _SkillsSection(userId: p.id, isSelf: isSelf),
               _ExperienceSection(userId: p.id, isSelf: isSelf),
               if (isSelf) _StatsSection(userId: p.id),

@@ -21,6 +21,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _fullName = TextEditingController();
   final _bio = TextEditingController();
+  final _studentInvolvement = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
   final _location = TextEditingController();
@@ -41,6 +42,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     _fullName.dispose();
     _bio.dispose();
+    _studentInvolvement.dispose();
     _company.dispose();
     _industry.dispose();
     _location.dispose();
@@ -79,6 +81,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             me.copyWith(
               fullName: _fullName.text.trim(),
               bio: _bio.text.trim(),
+              studentInvolvement: _studentInvolvement.text.trim(),
               avatarUrl: _avatarUrl,
               faculty: _faculty,
               course: _course,
@@ -112,6 +115,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _loaded = true;
       _fullName.text = me.fullName;
       _bio.text = me.bio ?? '';
+      // TODO: Pre-fill with AI assistant during onboarding flow (§2.6)
+      _studentInvolvement.text = me.studentInvolvement ?? '';
       _company.text = me.companyName ?? '';
       _industry.text = me.industry ?? '';
       _location.text = me.companyLocation ?? '';
@@ -194,6 +199,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             decoration: const InputDecoration(
               labelText: 'Bio',
               hintText: 'What you work on, what you want to build next.',
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _studentInvolvement,
+            maxLines: 3,
+            minLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Student Involvement',
+              hintText: 'Club activities, volunteer work, competitions, community involvement.',
             ),
           ),
           const SizedBox(height: 14),
