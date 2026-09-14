@@ -62,13 +62,23 @@ const kCodeLanguages = <String>[
 
 const kReactionEmojis = <String>['👍', '🔥', '🧠', '🎯', '👏'];
 
-/// Student emails must sit on a Richfield domain with a 9-digit prefix. The
-/// same rule is enforced in `handle_new_user()`; this copy exists so the user
-/// gets a useful message before the network round-trip.
+/// Domains accepted for student/alumni registration: Richfield's own, plus
+/// the AAA partner-campus domains. Kept as a list so a further domain is a
+/// one-line addition here and in `handle_new_user()`.
+const kStudentEmailDomains = <String>[
+  'my.richfield.ac.za',
+  'richfield.ac.za',
+  'my.aaa.ac.za',
+  'aaa.ac.za',
+];
+
+/// Student emails must sit on one of [kStudentEmailDomains] with a 9-digit
+/// prefix. The same rule is enforced in `handle_new_user()`; this copy exists
+/// so the user gets a useful message before the network round-trip.
 bool isValidStudentEmail(String email) {
   final clean = email.trim().toLowerCase();
-  final onDomain = clean.endsWith('@my.richfield.ac.za') ||
-      clean.endsWith('@richfield.ac.za');
+  final onDomain =
+      kStudentEmailDomains.any((domain) => clean.endsWith('@$domain'));
   if (!onDomain) return false;
   final prefix = clean.split('@').first;
   return RegExp(r'^\d{9}$').hasMatch(prefix);

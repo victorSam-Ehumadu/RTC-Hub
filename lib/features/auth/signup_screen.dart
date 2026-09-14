@@ -23,6 +23,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _fullName = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
+  final _studentNumber = TextEditingController();
+  final _graduationYear = TextEditingController();
 
   String _role = 'STUDENT';
   String? _faculty;
@@ -37,6 +39,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _fullName.dispose();
     _company.dispose();
     _industry.dispose();
+    _studentNumber.dispose();
+    _graduationYear.dispose();
     super.dispose();
   }
 
@@ -54,6 +58,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             faculty: _isStudentish ? _faculty : null,
             course: _isStudentish ? _course : null,
             academicYear: _isStudentish ? _year : null,
+            graduationYear:
+                _role == 'ALUMNI' ? int.tryParse(_graduationYear.text.trim()) : null,
+            studentNumber:
+                _role == 'ALUMNI' ? _studentNumber.text.trim() : null,
             companyName: _role == 'BUSINESS' ? _company.text : null,
             industry: _role == 'BUSINESS' ? _industry.text : null,
           );
@@ -63,6 +71,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         // Students are ACTIVE immediately, and signUp already left us with a
         // session, so the router will move to the feed on its own.
         showMessage(context, 'Welcome to RTC Hub.');
+      } else if (_role == 'ALUMNI') {
+        // If handle_new_user() found a matching past STUDENT record, the
+        // account is already ACTIVE and the router/AppShell will move on by
+        // themselves. Otherwise it's PENDING, and the (optional) document
+        // upload lives on AccountGateScreen — not here, since the router
+        // redirects away from /signup the instant a session exists, leaving
+        // no window to run a second step on this screen.
+        showMessage(
+          context,
+          'Registration submitted. If we can verify your details '
+          'automatically you\'ll be approved right away — otherwise an '
+          'admin will review you, and you can optionally upload a document '
+          'to help with that.',
+        );
       } else {
         showMessage(
           context,
@@ -134,7 +156,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           ? '202512345@my.richfield.ac.za'
                           : 'you@company.co.za',
                       helperText: _role == 'STUDENT'
-                          ? 'Richfield address, 9-digit student number'
+                          ? 'Richfield or AAA address, 9-digit student number'
                           : null,
                       helperMaxLines: 2,
                     ),
@@ -142,8 +164,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       final value = v?.trim() ?? '';
                       if (!value.contains('@')) return 'Enter your email address';
                       if (_role == 'STUDENT' && !isValidStudentEmail(value)) {
-                        return 'Must be a @richfield.ac.za address with a '
-                            '9-digit prefix';
+                        return 'Must be a Richfield or AAA student address '
+                            'with a 9-digit prefix';
                       }
                       return null;
                     },
@@ -200,6 +222,48 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ],
                       onChanged: (v) => setState(() => _year = v),
                       validator: (v) => v == null ? 'Pick your year' : null,
+                    ),
+                  ],
+
+                  if (_role == 'ALUMNI') ...[
+                    const SectionHeader(title: 'Verify your studies'),
+                    _Notice(
+                      icon: Icons.info_outline,
+                      text: "If these match an account you held as a "
+                          "student here, you're approved automatically. "
+                          "Otherwise, you can optionally upload a document "
+                          "afterwards — a degree certificate, graduation "
+                          "letter, or old student card — to help an admin "
+                          "review you faster.",
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _studentNumber,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Student number',
+                        hintText: 'The number you studied under',
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your student number'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _graduationYear,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Graduation year',
+                        hintText: 'e.g. 2023',
+                      ),
+                      validator: (v) {
+                        final year = int.tryParse(v?.trim() ?? '');
+                        final thisYear = DateTime.now().year;
+                        if (year == null || year < 1950 || year > thisYear) {
+                          return 'Enter a valid graduation year';
+                        }
+                        return null;
+                      },
                     ),
                   ],
 
