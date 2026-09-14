@@ -29,6 +29,20 @@ void main() {
     });
   });
 
+  group('password policy', () {
+    test('accepts a password meeting every requirement', () {
+      expect(passwordPolicyError('Str0ng!Pass'), isNull);
+    });
+
+    test('rejects one missing requirement at a time', () {
+      expect(passwordPolicyError('Sh0rt!'), isNotNull); // too short
+      expect(passwordPolicyError('nouppercase1!'), isNotNull);
+      expect(passwordPolicyError('NOLOWERCASE1!'), isNotNull);
+      expect(passwordPolicyError('NoDigitsHere!'), isNotNull);
+      expect(passwordPolicyError('NoSpecialChar123'), isNotNull);
+    });
+  });
+
   group('Profile', () {
     Profile build(Map<String, dynamic> overrides) => Profile.fromMap({
           'id': 'u1',

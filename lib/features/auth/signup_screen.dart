@@ -25,6 +25,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _email = TextEditingController();
   final _emailLocal = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   final _fullName = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
@@ -43,6 +44,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _email.dispose();
     _emailLocal.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     _fullName.dispose();
     _company.dispose();
     _industry.dispose();
@@ -202,9 +204,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   TextFormField(
                     controller: _password,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    validator: (v) => (v == null || v.length < 8)
-                        ? 'Use at least 8 characters'
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      helperText: '8+ characters, upper and lower case, a '
+                          'number and a special character',
+                      helperMaxLines: 2,
+                    ),
+                    validator: (v) => passwordPolicyError(v ?? ''),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirmPassword,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(labelText: 'Confirm password'),
+                    validator: (v) => v != _password.text
+                        ? 'Passwords don\'t match'
                         : null,
                   ),
 

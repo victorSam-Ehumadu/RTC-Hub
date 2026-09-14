@@ -107,3 +107,29 @@ bool isValidStudentEmail(String email) {
   final prefix = clean.split('@').first;
   return RegExp(r'^\d{9}$').hasMatch(prefix);
 }
+
+/// Checks a *new* password against the strength policy used at signup and
+/// when changing a password. Returns null when it passes, otherwise a
+/// message naming the first unmet requirement. Pure (no BuildContext) so a
+/// [TextFormField.validator] can call it directly.
+///
+/// Does not apply to a password being verified rather than created (e.g. a
+/// "current password" re-auth field) — those only need a non-empty check.
+final _passwordSpecialChars = RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]/\\~`]');
+
+String? passwordPolicyError(String password) {
+  if (password.length < 8) return 'Use at least 8 characters.';
+  if (!password.contains(RegExp('[A-Z]'))) {
+    return 'Include at least one uppercase letter.';
+  }
+  if (!password.contains(RegExp('[a-z]'))) {
+    return 'Include at least one lowercase letter.';
+  }
+  if (!password.contains(RegExp('[0-9]'))) {
+    return 'Include at least one number.';
+  }
+  if (!password.contains(_passwordSpecialChars)) {
+    return 'Include at least one special character.';
+  }
+  return null;
+}
