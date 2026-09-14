@@ -216,7 +216,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             minLines: 2,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              labelText: 'Student Involvement',
+              labelText: 'Involvement',
               hintText: 'Club activities, volunteer work, competitions, community involvement.',
             ),
           ),

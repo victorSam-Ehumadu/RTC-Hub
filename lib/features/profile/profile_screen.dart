@@ -136,28 +136,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(p.bio!, style: const TextStyle(height: 1.5)),
                 const SizedBox(height: 16),
               ],
-              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionHeader(title: 'Student Involvement'),
-                        Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: _ExperienceSection(userId: p.id, isSelf: isSelf),
-                ),
-              ),
-              const SizedBox(height: 16),
               // ─── EXTERNAL LINKS ─────────────────────────────
               if (p.portfolioUrl != null || p.linkedinUrl != null || p.credlyUrl != null) ...[
                 const SectionHeader(title: 'Links'),
@@ -196,6 +174,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 isConnected: connection,
               ),
               const SizedBox(height: 16),
+              // ─── EXPERIENCE & INVOLVEMENT ──────────────────
+              _ExperienceSection(userId: p.id, isSelf: isSelf),
+              const SizedBox(height: 16),
+              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionHeader(title: 'Involvement'),
+                        Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               // ─── METRICS & WORK ─────────────────────────────
               if (isSelf) ...[
                 _StatsSection(userId: p.id),
