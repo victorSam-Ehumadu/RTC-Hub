@@ -13,6 +13,11 @@ void main() {
       expect(isValidStudentEmail('  202512345@MY.RICHFIELD.AC.ZA '), isTrue);
     });
 
+    test('accepts a 9-digit AAA partner-campus address', () {
+      expect(isValidStudentEmail('202512345@my.aaa.ac.za'), isTrue);
+      expect(isValidStudentEmail('202512345@aaa.ac.za'), isTrue);
+    });
+
     test('rejects a non-Richfield domain', () {
       expect(isValidStudentEmail('202512345@gmail.com'), isFalse);
     });

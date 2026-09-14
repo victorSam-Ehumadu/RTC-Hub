@@ -18,13 +18,19 @@ class SignupScreen extends ConsumerStatefulWidget {
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  // Free-text email, used for ALUMNI/BUSINESS. STUDENT instead uses
+  // _emailLocal + _emailDomain below — registration is domain-restricted
+  // per the hackathon guidelines, so a dropdown of the allowed domains
+  // replaces free entry rather than just validating it after the fact.
   final _email = TextEditingController();
+  final _emailLocal = TextEditingController();
   final _password = TextEditingController();
   final _fullName = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
 
   String _role = 'STUDENT';
+  String _emailDomain = kStudentEmailDomains.first;
   String? _faculty;
   String? _course;
   String? _year;
@@ -33,6 +39,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   void dispose() {
     _email.dispose();
+    _emailLocal.dispose();
     _password.dispose();
     _fullName.dispose();
     _company.dispose();
@@ -45,9 +52,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
+    final email = _role == 'STUDENT'
+        ? '${_emailLocal.text.trim()}@$_emailDomain'
+        : _email.text;
     try {
       await ref.read(authRepoProvider).signUp(
-            email: _email.text,
+            email: email,
             password: _password.text,
             fullName: _fullName.text,
             role: _role,
@@ -125,29 +135,63 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         : null,
                   ),
                   const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: _role == 'STUDENT'
-                          ? '202512345@my.richfield.ac.za'
-                          : 'you@company.co.za',
-                      helperText: _role == 'STUDENT'
-                          ? 'Richfield address, 9-digit student number'
-                          : null,
-                      helperMaxLines: 2,
+                  if (_role == 'STUDENT')
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: TextFormField(
+                            controller: _emailLocal,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Student number',
+                              hintText: '202512345',
+                            ),
+                            validator: (v) =>
+                                RegExp(r'^\d{9}$').hasMatch(v?.trim() ?? '')
+                                    ? null
+                                    : '9 digits',
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16, left: 4, right: 4),
+                          child: Text('@', style: TextStyle(fontSize: 16)),
+                        ),
+                        Expanded(
+                          flex: 6,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _emailDomain,
+                            isExpanded: true,
+                            decoration:
+                                const InputDecoration(labelText: 'Domain'),
+                            items: [
+                              for (final d in kStudentEmailDomains)
+                                DropdownMenuItem(
+                                  value: d,
+                                  child:
+                                      Text(d, overflow: TextOverflow.ellipsis),
+                                ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _emailDomain = v!),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration:
+                          const InputDecoration(labelText: 'Email', hintText: 'you@company.co.za'),
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        return value.contains('@')
+                            ? null
+                            : 'Enter your email address';
+                      },
                     ),
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (!value.contains('@')) return 'Enter your email address';
-                      if (_role == 'STUDENT' && !isValidStudentEmail(value)) {
-                        return 'Must be a @richfield.ac.za address with a '
-                            '9-digit prefix';
-                      }
-                      return null;
-                    },
-                  ),
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _password,
