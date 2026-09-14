@@ -6,11 +6,11 @@ import '../../providers.dart';
 import '../settings/change_password_dialog.dart';
 import '../settings/delete_account_flow.dart';
 
-/// The hamburger-triggered quick-access settings panel: Dashboard, Edit
-/// profile, light/dark toggle, Change password, Delete account, Log out.
-/// Inlined directly in the Drawer rather than pushed as its own /settings
-/// route — simpler for a "quick access" panel, and trivial to promote to a
-/// pushed screen later if the list grows.
+/// The hamburger-triggered quick-access settings panel: Home, Dashboard,
+/// Edit profile, light/dark toggle, Change password, Delete account, Log
+/// out. Inlined directly in the Drawer rather than pushed as its own
+/// /settings route — simpler for a "quick access" panel, and trivial to
+/// promote to a pushed screen later if the list grows.
 ///
 /// Attach this as `drawer:` on every top-level tab Scaffold (the ones built
 /// with [HubAppBar]) and on ProfileScreen's own Scaffold — each builds its
@@ -37,6 +37,21 @@ class HubDrawer extends ConsumerWidget {
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
               ),
             ),
+            // Viewing someone else's profile pushes a route with no back
+            // button — a Scaffold shows its drawer's hamburger icon instead
+            // of a back arrow whenever both could apply, and every screen
+            // now has this drawer. `go` (not `push`) replaces the current
+            // location outright, so this always lands on the feed tab even
+            // from several profiles deep.
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Home'),
+              onTap: () {
+                close();
+                context.go('/feed');
+              },
+            ),
+            const Divider(),
             if (me?.isAdmin ?? false)
               ListTile(
                 leading: const Icon(Icons.admin_panel_settings_outlined),
