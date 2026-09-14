@@ -24,6 +24,8 @@ class Profile {
     this.talentDescription,
     this.cvUrl,
     this.portfolioUrl,
+    this.linkedinUrl,
+    this.credlyUrl,
     this.verificationPhotoUrl,
     this.profileCompleteness = 0,
     this.visibilityBusiness = true,
@@ -50,6 +52,8 @@ class Profile {
   final String? talentDescription;
   final String? cvUrl;
   final String? portfolioUrl;
+  final String? linkedinUrl;
+  final String? credlyUrl;
 
   /// A signed URL into the private `verification` storage bucket — the
   /// document an alumnus uploaded as evidence for Stream D's alumni
@@ -107,6 +111,8 @@ class Profile {
         talentDescription: map['talent_description'] as String?,
         cvUrl: map['cv_url'] as String?,
         portfolioUrl: map['portfolio_url'] as String?,
+        linkedinUrl: map['linkedin_url'] as String?,
+        credlyUrl: map['credly_url'] as String?,
         verificationPhotoUrl: map['verification_photo_url'] as String?,
         profileCompleteness: (map['profile_completeness'] as int?) ?? 0,
         visibilityBusiness: (map['visibility_business'] as bool?) ?? true,
@@ -130,6 +136,8 @@ class Profile {
         'talent_description': talentDescription,
         'cv_url': cvUrl,
         'portfolio_url': portfolioUrl,
+        'linkedin_url': linkedinUrl,
+        'credly_url': credlyUrl,
         'verification_photo_url': verificationPhotoUrl,
         'visibility_business': visibilityBusiness,
         'visibility_peers': visibilityPeers,
@@ -150,6 +158,8 @@ class Profile {
     String? talentDescription,
     String? cvUrl,
     String? portfolioUrl,
+    String? linkedinUrl,
+    String? credlyUrl,
     String? verificationPhotoUrl,
     bool? visibilityBusiness,
     bool? visibilityPeers,
@@ -174,6 +184,8 @@ class Profile {
         talentDescription: talentDescription ?? this.talentDescription,
         cvUrl: cvUrl ?? this.cvUrl,
         portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+        linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+        credlyUrl: credlyUrl ?? this.credlyUrl,
         verificationPhotoUrl: verificationPhotoUrl ?? this.verificationPhotoUrl,
         profileCompleteness: profileCompleteness,
         visibilityBusiness: visibilityBusiness ?? this.visibilityBusiness,

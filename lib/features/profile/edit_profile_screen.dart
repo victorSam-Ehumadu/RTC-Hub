@@ -26,6 +26,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _industry = TextEditingController();
   final _location = TextEditingController();
   final _portfolio = TextEditingController();
+  final _linkedinUrl = TextEditingController();
+  final _credlyUrl = TextEditingController();
 
   String? _faculty;
   String? _course;
@@ -47,6 +49,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _industry.dispose();
     _location.dispose();
     _portfolio.dispose();
+    _linkedinUrl.dispose();
+    _credlyUrl.dispose();
     super.dispose();
   }
 
@@ -91,6 +95,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               companyLocation: _location.text.trim(),
               portfolioUrl:
                   _portfolio.text.trim().isEmpty ? null : _portfolio.text.trim(),
+              linkedinUrl: _linkedinUrl.text.trim().isEmpty ? null : _linkedinUrl.text.trim(),
+              credlyUrl: _credlyUrl.text.trim().isEmpty ? null : _credlyUrl.text.trim(),
               visibilityBusiness: _visibleToBusiness,
               visibilityPeers: _visibleToPeers,
             ),
@@ -121,6 +127,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _industry.text = me.industry ?? '';
       _location.text = me.companyLocation ?? '';
       _portfolio.text = me.portfolioUrl ?? '';
+      _linkedinUrl.text = me.linkedinUrl ?? '';
+      _credlyUrl.text = me.credlyUrl ?? '';
       // Guard against stored values that no longer exist in kFaculties /
       // kAcademicYears (e.g. data from before a constants.dart edit, or a
       // profile written outside the app) — DropdownButtonFormField asserts
@@ -213,12 +221,33 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          const SectionHeader(title: 'Portfolio & Links'),
           TextField(
             controller: _portfolio,
             keyboardType: TextInputType.url,
             decoration: const InputDecoration(
               labelText: 'Portfolio / GitHub URL',
               prefixIcon: Icon(Icons.link, size: 20),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _linkedinUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'LinkedIn Profile',
+              prefixIcon: Icon(Icons.work_outline, size: 20),
+              hintText: 'https://linkedin.com/in/yourprofile',
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _credlyUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Credly Badge Collection',
+              prefixIcon: Icon(Icons.verified_user_outlined, size: 20),
+              hintText: 'https://www.credly.com/users/yourprofile',
             ),
           ),
 

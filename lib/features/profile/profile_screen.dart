@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme.dart';
 import '../../models/profile.dart';
@@ -23,6 +24,18 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _viewRecorded = false;
+
+  Future<void> _launchUrl(String urlString) async {
+    if (!urlString.startsWith('http')) {
+      urlString = 'https://$urlString';
+    }
+    final uri = Uri.tryParse(urlString);
+    if (uri == null) return;
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +65,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         iconTheme: const IconThemeData(color: hubBannerForeground),
         actionsIconTheme: const IconThemeData(color: hubBannerForeground),
         title: Text(
-          isSelf ? 'Your profile' : 'Profile',
+          isSelf ? 'Your Profile' : 'Profile',
           style: const TextStyle(
             color: hubBannerForeground,
             fontWeight: FontWeight.w800,
@@ -117,21 +130,66 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _Header(profile: p, isSelf: isSelf),
               if (isSelf) _CompletenessBar(profile: p),
               if (!isSelf) _ConnectRow(profile: p),
+              // ─── IDENTITY & SUMMARY ────────────────────────
               if (p.bio != null && p.bio!.isNotEmpty) ...[
-                const SectionHeader(title: 'About'),
+                const SectionHeader(title: 'Profile Summary'),
                 Text(p.bio!, style: const TextStyle(height: 1.5)),
               ],
-              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty) ...[
-                const SectionHeader(title: 'Student Involvement'),
-                Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
+              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionHeader(title: 'Student Involvement'),
+                        Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
+                      ],
+                    ),
+                  ),
+                ),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: _ExperienceSection(userId: p.id, isSelf: isSelf),
+                ),
+              ),
+              // ─── EXTERNAL LINKS ─────────────────────────────
+              if (p.portfolioUrl != null || p.linkedinUrl != null || p.credlyUrl != null) ...[
+                const SectionHeader(title: 'Links'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (p.portfolioUrl != null && p.portfolioUrl!.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: () => _launchUrl(p.portfolioUrl!),
+                        icon: const Icon(Icons.link, size: 18),
+                        label: const Text('Portfolio'),
+                      ),
+                    if (p.linkedinUrl != null && p.linkedinUrl!.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: () => _launchUrl(p.linkedinUrl!),
+                        icon: const Icon(Icons.work_outline, size: 18),
+                        label: const Text('LinkedIn'),
+                      ),
+                    if (p.credlyUrl != null && p.credlyUrl!.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: () => _launchUrl(p.credlyUrl!),
+                        icon: const Icon(Icons.verified_user_outlined, size: 18),
+                        label: const Text('Credly'),
+                      ),
+                  ],
+                ),
               ],
+              // ─── REPUTATION & SKILLS ───────────────────────
               _SkillsSection(userId: p.id, isSelf: isSelf),
               _RecommendationsSection(
                 userId: p.id,
                 isSelf: isSelf,
                 isConnected: connection,
               ),
-              _ExperienceSection(userId: p.id, isSelf: isSelf),
+              // ─── METRICS & WORK ─────────────────────────────
               if (isSelf) _StatsSection(userId: p.id),
               _PostsSection(userId: p.id),
             ],
@@ -374,7 +432,7 @@ class _SkillsSection extends ConsumerWidget {
                         child: InputChip(
                           avatar: s.verified
                               ? const Icon(Icons.verified,
-                                  size: 15, color: AppColors.accent)
+                                  size: 15, color: AppColors.success)
                               : null,
                           label: Text(
                             s.endorsements > 0
