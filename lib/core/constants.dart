@@ -38,6 +38,28 @@ const kSignupRoles = <String>['STUDENT', 'ALUMNI', 'BUSINESS'];
 
 const kAcademicYears = <String>['1st Year', '2nd Year', '3rd Year', 'Alumni'];
 
+/// Campuses a student/alumnus may have attended, used by signup and profile
+/// editing (guidelines §2.3 mandates "Campus attended" on every profile).
+const kCampuses = <String>[
+  'Bryanston Campus',
+  'Cape Town Campus',
+  'Centurion Campus',
+  'Musgrave Campus',
+  'Newtown Junction Campus',
+  'Polokwane Campus',
+  'Pretoria Campus',
+  'Umhlanga Campus',
+];
+
+/// A descending list of years for the enrollment/graduation-year dropdowns,
+/// spanning [before] years in the past to [after] in the future from now —
+/// enrollment is almost always in the past, but an expected graduation year
+/// for a current student is usually a few years out.
+List<int> kYearOptions({int before = 20, int after = 6}) {
+  final year = DateTime.now().year;
+  return [for (var y = year + after; y >= year - before; y--) y];
+}
+
 const kOpportunityTypes = <String>[
   'INTERNSHIP',
   'LEARNERSHIP',

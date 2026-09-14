@@ -34,6 +34,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   String? _faculty;
   String? _course;
   String? _year;
+  String? _campus;
+  int? _enrollmentYear;
   bool _busy = false;
 
   @override
@@ -64,6 +66,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             faculty: _isStudentish ? _faculty : null,
             course: _isStudentish ? _course : null,
             academicYear: _isStudentish ? _year : null,
+            campus: _isStudentish ? _campus : null,
+            enrollmentYear: _isStudentish ? _enrollmentYear : null,
             companyName: _role == 'BUSINESS' ? _company.text : null,
             industry: _role == 'BUSINESS' ? _industry.text : null,
           );
@@ -113,6 +117,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       _faculty = null;
                       _course = null;
                       _year = _role == 'ALUMNI' ? 'Alumni' : null;
+                      _campus = null;
+                      _enrollmentYear = null;
                     }),
                   ),
                   if (_role != 'STUDENT')
@@ -244,6 +250,32 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ],
                       onChanged: (v) => setState(() => _year = v),
                       validator: (v) => v == null ? 'Pick your year' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      initialValue: _campus,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Campus'),
+                      items: [
+                        for (final c in kCampuses)
+                          DropdownMenuItem(value: c, child: Text(c)),
+                      ],
+                      onChanged: (v) => setState(() => _campus = v),
+                      validator: (v) => v == null ? 'Pick your campus' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<int>(
+                      initialValue: _enrollmentYear,
+                      isExpanded: true,
+                      decoration:
+                          const InputDecoration(labelText: 'Year of enrollment'),
+                      items: [
+                        for (final y in kYearOptions(after: 0))
+                          DropdownMenuItem(value: y, child: Text('$y')),
+                      ],
+                      onChanged: (v) => setState(() => _enrollmentYear = v),
+                      validator: (v) =>
+                          v == null ? 'Pick your enrollment year' : null,
                     ),
                   ],
 

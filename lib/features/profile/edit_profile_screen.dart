@@ -29,6 +29,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _faculty;
   String? _course;
   String? _year;
+  String? _campus;
+  int? _enrollmentYear;
+  int? _graduationYear;
   String? _avatarUrl;
   bool _visibleToBusiness = true;
   bool _visibleToPeers = true;
@@ -83,6 +86,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               faculty: _faculty,
               course: _course,
               academicYear: _year,
+              campus: _campus,
+              enrollmentYear: _enrollmentYear,
+              graduationYear: _graduationYear,
               companyName: _company.text.trim(),
               industry: _industry.text.trim(),
               companyLocation: _location.text.trim(),
@@ -125,6 +131,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _course =
           coursesForFaculty(_faculty).contains(me.course) ? me.course : null;
       _year = kAcademicYears.contains(me.academicYear) ? me.academicYear : null;
+      _campus = kCampuses.contains(me.campus) ? me.campus : null;
+      _enrollmentYear = kYearOptions(after: 0).contains(me.enrollmentYear)
+          ? me.enrollmentYear
+          : null;
+      _graduationYear =
+          kYearOptions().contains(me.graduationYear) ? me.graduationYear : null;
       _avatarUrl = me.avatarUrl;
       _visibleToBusiness = me.visibilityBusiness;
       _visibleToPeers = me.visibilityPeers;
@@ -245,6 +257,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   DropdownMenuItem(value: y, child: Text(y)),
               ],
               onChanged: (v) => setState(() => _year = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: _campus,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Campus'),
+              items: [
+                for (final c in kCampuses)
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: (v) => setState(() => _campus = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _enrollmentYear,
+              isExpanded: true,
+              decoration:
+                  const InputDecoration(labelText: 'Year of enrollment'),
+              items: [
+                for (final y in kYearOptions(after: 0))
+                  DropdownMenuItem(value: y, child: Text('$y')),
+              ],
+              onChanged: (v) => setState(() => _enrollmentYear = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _graduationYear,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Year of graduation (actual or expected)',
+              ),
+              items: [
+                for (final y in kYearOptions())
+                  DropdownMenuItem(value: y, child: Text('$y')),
+              ],
+              onChanged: (v) => setState(() => _graduationYear = v),
             ),
           ],
 

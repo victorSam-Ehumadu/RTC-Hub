@@ -759,6 +759,8 @@ class DemoAuthRepository extends AuthRepository {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? companyName,
     String? industry,
   }) async {}

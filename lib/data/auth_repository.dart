@@ -33,6 +33,8 @@ class AuthRepository {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? companyName,
     String? industry,
   }) async {
@@ -42,8 +44,8 @@ class AuthRepository {
     // instead of Auth's generic "Database error saving new user".
     if (role == 'STUDENT' && !isValidStudentEmail(clean)) {
       throw StateError(
-        'Students must register with a @richfield.ac.za address whose prefix '
-        'is a 9-digit student number.',
+        'Students must register with a Richfield or AAA address whose '
+        'prefix is a 9-digit student number.',
       );
     }
 
@@ -57,6 +59,8 @@ class AuthRepository {
         'course': ?course,
         'academic_year': ?academicYear,
         if (graduationYear != null) 'graduation_year': '$graduationYear',
+        'campus': ?campus,
+        if (enrollmentYear != null) 'enrollment_year': '$enrollmentYear',
         'company_name': ?companyName,
         'industry': ?industry,
       },
