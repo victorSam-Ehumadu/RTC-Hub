@@ -13,7 +13,6 @@ import 'providers.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   dotenv.load(fileName: ".env");
-  runApp(RtcHubApp());
 
   timeago.setLocaleMessages('en_short', timeago.EnShortMessages());
 
