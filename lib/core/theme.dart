@@ -54,15 +54,17 @@ ThemeData _build({required bool dark}) {
   final border = dark ? AppColors.darkBorder : AppColors.lightBorder;
   final text = dark ? AppColors.darkText : AppColors.lightText;
   final muted = dark ? AppColors.darkMuted : AppColors.lightMuted;
+  final onPrimary = dark ? Colors.white : Colors.black;
+  final onError = dark ? Colors.white : Colors.black;
 
   final scheme = ColorScheme(
     brightness: dark ? Brightness.dark : Brightness.light,
     primary: AppColors.accent,
-    onPrimary: Colors.white,
+    onPrimary: onPrimary,
     secondary: AppColors.points,
     onSecondary: const Color(0xFF1A1204),
     error: AppColors.danger,
-    onError: Colors.white,
+    onError: onError,
     surface: surface,
     onSurface: text,
     outline: border,
@@ -126,7 +128,7 @@ ThemeData _build({required bool dark}) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.button,
-        foregroundColor: Colors.white,
+        foregroundColor: onPrimary,
         minimumSize: const Size.fromHeight(50),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -152,12 +154,12 @@ ThemeData _build({required bool dark}) {
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: AppColors.button,
-        selectedForegroundColor: Colors.white,
+        selectedForegroundColor: onPrimary,
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: AppColors.button,
-      foregroundColor: Colors.white,
+      foregroundColor: onPrimary,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: AppColors.button,
