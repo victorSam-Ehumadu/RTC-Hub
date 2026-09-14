@@ -151,8 +151,16 @@ class ProfileRepository {
 
   // ─── Leaderboard ───────────────────────────────────────────
 
+  // `leaderboard` (the view) is no longer directly readable by clients as
+  // of migration 0016 — it stayed owner-rights so the points SUM is still
+  // correct, but that meant it also ignored visibility_peers, so a user who
+  // hid their profile still showed up here by name. leaderboard_rows()
+  // applies that visibility check itself.
   Future<List<LeaderboardEntry>> leaderboard({int limit = 25}) async {
-    final rows = await db.from('leaderboard').select().limit(limit);
-    return rows.map(LeaderboardEntry.fromMap).toList();
+    final rows =
+        await db.rpc('leaderboard_rows', params: {'p_limit': limit}) as List;
+    return rows
+        .map((r) => LeaderboardEntry.fromMap(r as Map<String, dynamic>))
+        .toList();
   }
 }
