@@ -398,42 +398,10 @@ class _SkillsSection extends ConsumerWidget {
   }
 
   Future<void> _addSkill(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-
-    // Popping the dialog synchronously from a callback on the autofocused
-    // TextField (Enter key, or a button tapped while it still has focus)
-    // races the field's own focus/keyboard teardown and can trip Flutter's
-    // '_dependents.isEmpty' assertion. Deferring to the next frame lets that
-    // teardown finish before the dialog route is torn down.
-    void close(BuildContext dialogContext, [String? value]) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
-      });
-    }
-
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add a skill'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
-          onSubmitted: (v) => close(dialogContext, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => close(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => close(dialogContext, controller.text),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) => const _AddSkillDialog(),
     );
-    controller.dispose();
 
     if (name == null || name.trim().isEmpty) return;
     try {
@@ -443,6 +411,71 @@ class _SkillsSection extends ConsumerWidget {
     } catch (error) {
       if (context.mounted) showError(context, error);
     }
+  }
+}
+
+/// The "add a skill" dialog's content, as its own [StatefulWidget].
+///
+/// This used to be an inline [TextField] with `autofocus: true` built
+/// straight into the [showDialog] call. `autofocus` schedules its own
+/// focus request for a later frame internally, and a fast Cancel — one
+/// that dismisses the dialog before that scheduled request lands, which is
+/// exactly what tapping Cancel before typing anything does — could tear
+/// down the field's element while it was still mid-registration as an
+/// `InheritedWidget` dependent, tripping Flutter's `'_dependents.isEmpty'`
+/// assertion. Owning the [FocusNode] here and requesting focus explicitly,
+/// after the first frame and guarded by [mounted], avoids that race, and
+/// ties both the node's and the controller's lifecycle to this widget's own
+/// rather than to `TextField`'s internal bookkeeping.
+class _AddSkillDialog extends StatefulWidget {
+  const _AddSkillDialog();
+
+  @override
+  State<_AddSkillDialog> createState() => _AddSkillDialogState();
+}
+
+class _AddSkillDialogState extends State<_AddSkillDialog> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _close([String? value]) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.pop(context, value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add a skill'),
+      content: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
+        onSubmitted: (v) => _close(v),
+      ),
+      actions: [
+        TextButton(onPressed: () => _close(), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => _close(_controller.text),
+          child: const Text('Add'),
+        ),
+      ],
+    );
   }
 }
 
