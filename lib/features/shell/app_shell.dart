@@ -353,6 +353,15 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       actions: [
         ...?actions,
+        // Stream A addition (§2.6: the assistant is "an ongoing chatbot the
+        // user can return to") — shared here rather than per-screen so
+        // every tab that uses HubAppBar gets it for free. Flag to whoever
+        // owns this file if it collides.
+        IconButton(
+          tooltip: 'Assistant',
+          onPressed: () => context.push('/assistant'),
+          icon: Icon(Icons.smart_toy_outlined, color: onBanner),
+        ),
         IconButton(
           onPressed: () => context.push('/notifications'),
           icon: Stack(

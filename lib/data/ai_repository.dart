@@ -200,11 +200,12 @@ class AiRepository {
 
   /// §2.8: NLP-assisted profile building. Sends the CV file itself to
   /// Gemini as an inline attachment (it reads PDFs/docs natively) rather
-  /// than trying to extract text ourselves first, and asks for a plain
-  /// JSON list of skill names back. Returns an empty list rather than
-  /// throwing if the model's reply can't be parsed — a CV with no
-  /// detectable skills is a valid outcome, not a bug.
-  Future<List<String>> extractSkillsFromCv({
+  /// than trying to extract text ourselves first, and asks for skills *and*
+  /// work experience back in one call — one attachment upload, one round
+  /// trip, rather than analysing the same file twice. Returns empty lists
+  /// rather than throwing if the model's reply can't be parsed — a CV with
+  /// nothing detectable is a valid outcome, not a bug.
+  Future<CvExtraction> extractFromCv({
     required List<int> bytes,
     required String mimeType,
   }) async {
@@ -216,10 +217,32 @@ class AiRepository {
     }
 
     const prompt = '''
-Extract a list of professional/technical skills from this CV. Return ONLY a
-JSON array of short skill name strings, nothing else — no markdown fences,
-no explanation. Example: ["Python", "Public Speaking", "Figma"]. If none are
-findable, return [].
+Extract from this CV:
+1. Professional/technical skills — short names only.
+2. Work experience entries — job title, employer, start date, end date, and
+   a one-sentence description if one is stated.
+
+Return ONLY a JSON object, nothing else — no markdown fences, no
+explanation:
+{
+  "skills": ["Python", "Figma"],
+  "experience": [
+    {
+      "title": "Junior Developer",
+      "company": "Acme Corp",
+      "startDate": "2023-01-01",
+      "endDate": "2024-06-01",
+      "description": "Built internal tooling in Python."
+    }
+  ]
+}
+
+Rules:
+- Dates must be "YYYY-MM-DD" (use the 1st of the month when only a month and
+  year are given), or null if a date isn't stated.
+- A current/ongoing role has "endDate": null.
+- If nothing is found for a field, return an empty list for it — never omit
+  either key.
 ''';
 
     final response = await http.post(
@@ -260,15 +283,18 @@ findable, return [].
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final candidates = (body['candidates'] as List?) ?? const [];
-    if (candidates.isEmpty) return const [];
+    if (candidates.isEmpty) return const CvExtraction();
 
     final text = _extractText(candidates.first as Map<String, dynamic>);
-    return text == null ? const [] : _parseSkillList(text);
+    return text == null ? const CvExtraction() : _parseCvExtraction(text);
   }
 
   /// Gemini is asked for plain JSON but occasionally wraps it in a
-  /// ```json ... ``` fence anyway — strip that before parsing.
-  List<String> _parseSkillList(String raw) {
+  /// ```json ... ``` fence anyway — strip that before parsing. Anything
+  /// that still doesn't parse cleanly, or has an entry missing a title or
+  /// company, is dropped rather than surfaced as an error — the user can
+  /// just try again.
+  CvExtraction _parseCvExtraction(String raw) {
     var cleaned = raw.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned
@@ -278,18 +304,36 @@ findable, return [].
     }
     try {
       final decoded = jsonDecode(cleaned);
-      if (decoded is List) {
-        return decoded
-            .whereType<String>()
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-      }
+      if (decoded is! Map<String, dynamic>) return const CvExtraction();
+
+      final skills = (decoded['skills'] as List? ?? const [])
+          .whereType<String>()
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      final experience = (decoded['experience'] as List? ?? const [])
+          .whereType<Map>()
+          .map((entry) {
+            final e = entry.cast<String, dynamic>();
+            final title = (e['title'] as String? ?? '').trim();
+            final company = (e['company'] as String? ?? '').trim();
+            if (title.isEmpty || company.isEmpty) return null;
+            return ExtractedExperience(
+              title: title,
+              company: company,
+              startDate: DateTime.tryParse(e['startDate'] as String? ?? ''),
+              endDate: DateTime.tryParse(e['endDate'] as String? ?? ''),
+              description: (e['description'] as String?)?.trim(),
+            );
+          })
+          .whereType<ExtractedExperience>()
+          .toList();
+
+      return CvExtraction(skills: skills, experience: experience);
     } catch (_) {
-      // A response that doesn't parse cleanly is treated as "no skills
-      // found" rather than a crash — the user can just try again.
+      return const CvExtraction();
     }
-    return const [];
   }
 
   // ─── Onboarding progress ──────────────────────────────────────

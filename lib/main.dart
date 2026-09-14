@@ -44,7 +44,7 @@ class RtcHubApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'RTC Hub',
+      title: 'Richfield Community',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
@@ -61,7 +61,7 @@ class _SetupNeededApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RTC Hub',
+      title: 'Richfield Community',
       debugShowCheckedModeBanner: false,
       theme: buildDarkTheme(),
       home: Scaffold(

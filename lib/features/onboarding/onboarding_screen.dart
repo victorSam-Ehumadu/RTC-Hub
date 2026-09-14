@@ -127,18 +127,29 @@ filled in, say so clearly and tell them they can head into the app.
 
   @override
   Widget build(BuildContext context) {
+    // Watched (not read) so that coming back from /cv-skills after an
+    // upload — which invalidates myProfileProvider — flips the exit
+    // button's label without needing its own state.
+    final hasCv = (ref.watch(myProfileProvider).valueOrNull?.cvUrl ?? '')
+        .isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Getting you set up'),
         actions: [
-          IconButton(
-            tooltip: 'Suggest skills from your CV',
+          // An icon alone here had no label or prompt telling the user what
+          // it was for — a `tooltip` needs a long-press to even discover on
+          // mobile. A visible label fixes that outright.
+          TextButton.icon(
             onPressed: () => context.push('/cv-skills'),
-            icon: const Icon(Icons.description_outlined),
+            icon: const Icon(Icons.description_outlined, size: 18),
+            label: const Text('Upload CV'),
           ),
           TextButton(
             onPressed: () => context.go('/feed'),
-            child: const Text('Skip for now'),
+            // "Skip" only makes sense before the user has put anything in.
+            // Once a CV is on file, leaving is "done", not "skipped".
+            child: Text(hasCv ? 'Done' : 'Skip for now'),
           ),
         ],
       ),
