@@ -119,6 +119,58 @@ class ProfileRepository {
         'note': note,
       });
 
+  Future<List<SkillEndorsement>> skillEndorsements(String skillId) async {
+    final rows = await db
+        .from('skill_endorsements')
+        .select('*, endorser:profiles!endorser_id(id, full_name, avatar_url)')
+        .eq('skill_id', skillId)
+        .order('created_at', ascending: false);
+    return rows.map(SkillEndorsement.fromMap).toList();
+  }
+
+  // ─── Recommendations ───────────────────────────────────────
+
+  /// Approved recommendations visible on a user's profile.
+  Future<List<Recommendation>> recommendations(String userId) async {
+    final rows = await db
+        .from('recommendations')
+        .select('*, author:profiles!author_id(id, full_name, avatar_url)')
+        .eq('recipient_id', userId)
+        .eq('status', 'APPROVED')
+        .order('created_at', ascending: false);
+    return rows.map(Recommendation.fromMap).toList();
+  }
+
+  /// Pending recommendations waiting for the current user to approve/decline.
+  Future<List<Recommendation>> pendingRecommendations() async {
+    final rows = await db
+        .from('recommendations')
+        .select('*, author:profiles!author_id(id, full_name, avatar_url)')
+        .eq('recipient_id', requireUserId)
+        .eq('status', 'PENDING')
+        .order('created_at', ascending: false);
+    return rows.map(Recommendation.fromMap).toList();
+  }
+
+  Future<void> writeRecommendation(String recipientId, String body) =>
+      db.from('recommendations').insert({
+        'author_id': requireUserId,
+        'recipient_id': recipientId,
+        'body': body.trim(),
+      });
+
+  Future<void> approveRecommendation(String recommendationId) =>
+      db.from('recommendations').update({
+        'status': 'APPROVED',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', recommendationId);
+
+  Future<void> declineRecommendation(String recommendationId) =>
+      db.from('recommendations').update({
+        'status': 'DECLINED',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', recommendationId);
+
   // ─── Work experience ───────────────────────────────────────
 
   Future<List<WorkExperience>> experience(String userId) async {

@@ -41,6 +41,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final profile =
         isSelf && me != null ? AsyncValue.data(me) : ref.watch(profileProvider(targetId));
 
+    final connection =
+        isSelf ? false : ref.watch(connectionWithProvider(targetId)).valueOrNull?.isAccepted ?? false;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -123,6 +126,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(p.studentInvolvement!, style: const TextStyle(height: 1.5)),
               ],
               _SkillsSection(userId: p.id, isSelf: isSelf),
+              _RecommendationsSection(
+                userId: p.id,
+                isSelf: isSelf,
+                isConnected: connection,
+              ),
               _ExperienceSection(userId: p.id, isSelf: isSelf),
               if (isSelf) _StatsSection(userId: p.id),
               _PostsSection(userId: p.id),
@@ -359,45 +367,185 @@ class _SkillsSection extends ConsumerWidget {
                   runSpacing: 8,
                   children: [
                     for (final s in list)
-                      InputChip(
-                        avatar: s.verified
-                            ? const Icon(Icons.verified,
-                                size: 15, color: AppColors.accent)
+                      GestureDetector(
+                        onLongPress: s.endorsements > 0 && !isSelf
+                            ? () => _viewEndorsements(context, ref, s.id, s.name)
                             : null,
-                        label: Text(
-                          s.endorsements > 0
-                              ? '${s.name} · ${s.endorsements}'
-                              : s.name,
-                        ),
-                        onPressed: isSelf
-                            ? null
-                            : () async {
-                                try {
+                        child: InputChip(
+                          avatar: s.verified
+                              ? const Icon(Icons.verified,
+                                  size: 15, color: AppColors.accent)
+                              : null,
+                          label: Text(
+                            s.endorsements > 0
+                                ? '${s.name} · ${s.endorsements}'
+                                : s.name,
+                          ),
+                          onPressed: isSelf
+                              ? null
+                              : () => _endorseSkill(
+                                  context, ref, s.id, s.name, userId),
+                          onDeleted: isSelf
+                              ? () async {
                                   await ref
                                       .read(profileRepoProvider)
-                                      .endorse(s.id);
+                                      .removeSkill(s.id);
                                   ref.invalidate(skillsProvider(userId));
-                                  if (context.mounted) {
-                                    showMessage(context, 'Endorsed ${s.name}.');
-                                  }
-                                } catch (error) {
-                                  if (context.mounted) showError(context, error);
+                                  ref.invalidate(myProfileProvider);
                                 }
-                              },
-                        onDeleted: isSelf
-                            ? () async {
-                                await ref
-                                    .read(profileRepoProvider)
-                                    .removeSkill(s.id);
-                                ref.invalidate(skillsProvider(userId));
-                                ref.invalidate(myProfileProvider);
-                              }
-                            : null,
+                              : null,
+                        ),
                       ),
                   ],
                 ),
         ),
       ],
+    );
+  }
+
+  Future<void> _endorseSkill(
+    BuildContext context,
+    WidgetRef ref,
+    String skillId,
+    String skillName,
+    String userId,
+  ) async {
+    final noteController = TextEditingController();
+
+    final note = await showModalBottomSheet<String?>(
+      context: context,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Endorse $skillName',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                minLines: 1,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Note (optional)',
+                  hintText: 'Say why you\'re endorsing this skill',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(
+                        sheetContext,
+                        noteController.text.trim(),
+                      );
+                    },
+                    child: const Text('Endorse'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    noteController.dispose();
+
+    if (note == null) return;
+
+    try {
+      await ref
+          .read(profileRepoProvider)
+          .endorse(skillId, note: note.isEmpty ? null : note);
+      ref.invalidate(skillsProvider(userId));
+      if (context.mounted) {
+        showMessage(context, 'Endorsed $skillName.');
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  Future<void> _viewEndorsements(
+    BuildContext context,
+    WidgetRef ref,
+    String skillId,
+    String skillName,
+  ) async {
+    final endorsements =
+        await ref.read(profileRepoProvider).skillEndorsements(skillId);
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        builder: (sheetContext, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              '$skillName · ${endorsements.length} endorsement${endorsements.length != 1 ? 's' : ''}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 14),
+            if (endorsements.isEmpty)
+              Text(
+                'No endorsements yet.',
+                style: TextStyle(
+                  color: Theme.of(sheetContext)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+              ),
+            for (final e in endorsements) ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Avatar(
+                  profile: Profile(
+                    id: e.endorserId,
+                    email: '',
+                    fullName: e.endorserName,
+                    role: 'STUDENT',
+                    status: 'ACTIVE',
+                    avatarUrl: e.endorserAvatarUrl,
+                    profileCompleteness: 0,
+                  ),
+                  radius: 20,
+                ),
+                title: Text(e.endorserName),
+                subtitle: e.note != null && e.note!.isNotEmpty
+                    ? Text(
+                        e.note!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      )
+                    : null,
+              ),
+              const Divider(),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -444,6 +592,301 @@ class _SkillsSection extends ConsumerWidget {
       await ref.read(profileRepoProvider).addSkill(name);
       ref.invalidate(skillsProvider(userId));
       ref.invalidate(myProfileProvider);
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+}
+
+class _RecommendationsSection extends ConsumerWidget {
+  const _RecommendationsSection({
+    required this.userId,
+    required this.isSelf,
+    required this.isConnected,
+  });
+
+  final String userId;
+  final bool isSelf;
+  final bool isConnected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final approved = ref.watch(recommendationsProvider(userId));
+    final pending =
+        isSelf ? ref.watch(pendingRecommendationsProvider) : const AsyncValue.data([]);
+
+    return approved.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (recList) {
+        if (recList.isEmpty && !isSelf) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(
+              title: 'Recommendations',
+              action: !isSelf && isConnected
+                  ? IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _writeRecommendation(context, ref),
+                      icon: const Icon(Icons.add, size: 20),
+                    )
+                  : null,
+            ),
+            if (recList.isEmpty)
+              Text(
+                isSelf
+                    ? 'No approved recommendations yet.'
+                    : 'No recommendations.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+              ),
+            for (final r in recList)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Avatar(
+                              profile: Profile(
+                                id: r.authorId,
+                                email: '',
+                                fullName: r.authorName,
+                                role: 'STUDENT',
+                                status: 'ACTIVE',
+                                avatarUrl: r.authorAvatarUrl,
+                                profileCompleteness: 0,
+                              ),
+                              radius: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                r.authorName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          r.body,
+                          style: const TextStyle(height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (isSelf)
+              pending.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (pendingList) {
+                  if (pendingList.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      Text(
+                        'Pending (${pendingList.length})',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      for (final p in pendingList)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Card(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surface
+                                .withValues(alpha: 0.7),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Avatar(
+                                        profile: Profile(
+                                          id: p.authorId,
+                                          email: '',
+                                          fullName: p.authorName,
+                                          role: 'STUDENT',
+                                          status: 'ACTIVE',
+                                          avatarUrl: p.authorAvatarUrl,
+                                          profileCompleteness: 0,
+                                        ),
+                                        radius: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          p.authorName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(p.body, style: const TextStyle(height: 1.5)),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          try {
+                                            await ref
+                                                .read(profileRepoProvider)
+                                                .declineRecommendation(p.id);
+                                            ref.invalidate(
+                                                pendingRecommendationsProvider);
+                                            if (context.mounted) {
+                                              showMessage(
+                                                context,
+                                                'Recommendation declined.',
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              showError(context, e);
+                                            }
+                                          }
+                                        },
+                                        icon: const Icon(Icons.close, size: 18),
+                                        label: const Text('Decline'),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      FilledButton.icon(
+                                        onPressed: () async {
+                                          try {
+                                            await ref
+                                                .read(profileRepoProvider)
+                                                .approveRecommendation(p.id);
+                                            ref.invalidate(
+                                                pendingRecommendationsProvider);
+                                            ref.invalidate(
+                                                recommendationsProvider(userId));
+                                            if (context.mounted) {
+                                              showMessage(
+                                                context,
+                                                'Recommendation approved!',
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              showError(context, e);
+                                            }
+                                          }
+                                        },
+                                        icon: const Icon(Icons.check, size: 18),
+                                        label: const Text('Approve'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _writeRecommendation(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final bodyController = TextEditingController();
+
+    final body = await showModalBottomSheet<String?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Write a recommendation',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: bodyController,
+                maxLines: 4,
+                minLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Your recommendation',
+                  hintText:
+                      'Share your experience working with this person and what makes them great.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: bodyController.text.trim().isEmpty
+                        ? null
+                        : () {
+                            Navigator.pop(sheetContext, bodyController.text);
+                          },
+                    child: const Text('Submit'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    bodyController.dispose();
+
+    if (body == null || body.trim().isEmpty) return;
+
+    try {
+      await ref.read(profileRepoProvider).writeRecommendation(userId, body);
+      if (context.mounted) {
+        showMessage(context, 'Recommendation sent!');
+      }
     } catch (error) {
       if (context.mounted) showError(context, error);
     }

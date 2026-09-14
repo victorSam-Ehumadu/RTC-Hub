@@ -197,6 +197,81 @@ class Skill {
       );
 }
 
+/// A skill endorsement row with endorser profile info.
+class SkillEndorsement {
+  const SkillEndorsement({
+    required this.id,
+    required this.skillId,
+    required this.endorserId,
+    required this.endorserName,
+    required this.endorserAvatarUrl,
+    this.note,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String skillId;
+  final String endorserId;
+  final String endorserName;
+  final String? endorserAvatarUrl;
+  final String? note;
+  final DateTime createdAt;
+
+  factory SkillEndorsement.fromMap(Map<String, dynamic> map) => SkillEndorsement(
+        id: map['id'] as String,
+        skillId: map['skill_id'] as String,
+        endorserId: map['endorser_id'] as String,
+        endorserName: (map['endorser'] != null && map['endorser'] is Map
+                ? (map['endorser'] as Map)['full_name']
+                : null) as String? ??
+            'Unknown',
+        endorserAvatarUrl: map['endorser'] != null && map['endorser'] is Map
+            ? (map['endorser'] as Map)['avatar_url'] as String?
+            : null,
+        note: map['note'] as String?,
+        createdAt: DateTime.parse((map['created_at'] ?? '') as String),
+      );
+}
+
+/// A recommendation row with author profile info.
+class Recommendation {
+  const Recommendation({
+    required this.id,
+    required this.authorId,
+    required this.authorName,
+    required this.authorAvatarUrl,
+    required this.body,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String? authorAvatarUrl;
+  final String body;
+  final String status; // PENDING, APPROVED, DECLINED
+  final DateTime createdAt;
+
+  bool get isPending => status == 'PENDING';
+  bool get isApproved => status == 'APPROVED';
+
+  factory Recommendation.fromMap(Map<String, dynamic> map) => Recommendation(
+        id: map['id'] as String,
+        authorId: map['author_id'] as String,
+        authorName: (map['author'] != null && map['author'] is Map
+                ? (map['author'] as Map)['full_name']
+                : null) as String? ??
+            'Unknown',
+        authorAvatarUrl: map['author'] != null && map['author'] is Map
+            ? (map['author'] as Map)['avatar_url'] as String?
+            : null,
+        body: (map['body'] ?? '') as String,
+        status: (map['status'] ?? 'PENDING') as String,
+        createdAt: DateTime.parse((map['created_at'] ?? '') as String),
+      );
+}
+
 /// A `work_experience` row.
 class WorkExperience {
   const WorkExperience({
