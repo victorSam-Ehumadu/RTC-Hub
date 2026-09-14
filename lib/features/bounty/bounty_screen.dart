@@ -8,6 +8,7 @@ import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 
 /// The bounty board — open problems ranked by the points on offer.
 class BountyScreen extends ConsumerWidget {
@@ -19,6 +20,7 @@ class BountyScreen extends ConsumerWidget {
     final faculty = ref.watch(bountyFacultyProvider);
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: HubAppBar(
         title: 'Bounties',
         actions: [

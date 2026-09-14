@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/supabase.dart';
@@ -313,3 +315,34 @@ final businessStatsProvider =
     FutureProvider.autoDispose.family<BusinessStats, String>((ref, userId) {
   return ref.watch(analyticsRepoProvider).forBusiness(userId);
 });
+
+// ─── Theme ────────────────────────────────────────────────────
+
+const _themeModePrefKey = 'theme_mode';
+
+/// The user's light/dark preference from the settings drawer, persisted
+/// across restarts. Defaults to dark — "the terminal look" main.dart used to
+/// hardcode — until [ThemeModeController._restore] loads a saved choice.
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>(
+        (_) => ThemeModeController());
+
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController() : super(ThemeMode.dark) {
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_themeModePrefKey);
+    if (saved != null && mounted) {
+      state = ThemeMode.values.byName(saved);
+    }
+  }
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModePrefKey, mode.name);
+  }
+}

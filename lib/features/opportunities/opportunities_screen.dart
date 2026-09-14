@@ -8,6 +8,7 @@ import '../../models/profile.dart' show Skill;
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 
 /// Two different screens behind one tab: businesses manage their listings,
 /// everyone else browses and applies.
@@ -45,6 +46,7 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
         : ref.watch(skillsProvider(me.id));
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: const HubAppBar(title: 'Opportunities'),
       body: Column(
         children: [
@@ -321,6 +323,7 @@ class _BusinessView extends ConsumerWidget {
     final listings = ref.watch(myOpportunitiesProvider);
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: HubAppBar(
         title: 'Your listings',
         actions: [

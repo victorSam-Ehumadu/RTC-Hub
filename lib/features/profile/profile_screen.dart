@@ -8,6 +8,7 @@ import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 
 /// Someone's profile — theirs or your own.
 ///
@@ -42,6 +43,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         isSelf && me != null ? AsyncValue.data(me) : ref.watch(profileProvider(targetId));
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
