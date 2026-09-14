@@ -383,6 +383,61 @@ const hubBannerForeground = Colors.white;
 /// busier (photo) half.
 const hubBannerTitleShadow = [Shadow(color: Colors.black87, blurRadius: 8)];
 
+/// IconButton wrapper that provides visible hover/press feedback on banner backgrounds.
+/// Uses a semi-transparent circular background on hover and a more opaque one on press.
+class HubIconButton extends StatefulWidget {
+  const HubIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  final Widget icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  @override
+  State<HubIconButton> createState() => _HubIconButtonState();
+}
+
+class _HubIconButtonState extends State<HubIconButton> {
+  bool _isHovering = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _isPressed
+                ? Colors.white.withValues(alpha: 0.25)
+                : _isHovering
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.transparent,
+          ),
+          child: IconButton(
+            icon: widget.icon,
+            onPressed: widget.onPressed,
+            tooltip: widget.tooltip,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            splashRadius: 24,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The Richfield banner image with a left-to-right dark scrim, sized to sit
 /// behind an `AppBar` via `flexibleSpace`. Shared by [HubAppBar] and any
 /// screen with its own `AppBar` that wants the same top-bar treatment (e.g.
@@ -466,12 +521,15 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
         // user can return to") — shared here rather than per-screen so
         // every tab that uses HubAppBar gets it for free. Flag to whoever
         // owns this file if it collides.
-        IconButton(
-          tooltip: 'Assistant',
+        HubIconButton(
+          tooltip: 'AI Assistant',
           onPressed: () => context.push('/assistant'),
           icon: Icon(Icons.smart_toy_outlined, color: onBanner),
         ),
-        IconButton(
+        HubIconButton(
+          tooltip: unread > 0
+              ? 'Notifications ($unread unread)'
+              : 'Notifications',
           onPressed: () => context.push('/notifications'),
           icon: Stack(
             clipBehavior: Clip.none,
