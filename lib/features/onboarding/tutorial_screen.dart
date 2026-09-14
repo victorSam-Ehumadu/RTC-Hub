@@ -11,11 +11,25 @@ class _TutorialStep {
     required this.icon,
     required this.title,
     required this.body,
+    required this.prompt,
+    required this.actionLabel,
+    required this.resultLabel,
   });
 
   final IconData icon;
   final String title;
   final String body;
+
+  /// Instruction shown above the tap target — what to do, not just what to
+  /// read.
+  final String prompt;
+
+  /// Label on the tap target itself before it's been tapped.
+  final String actionLabel;
+
+  /// What the tap target turns into afterwards, confirming something
+  /// happened rather than just moving on.
+  final String resultLabel;
 }
 
 const _steps = [
@@ -25,6 +39,9 @@ const _steps = [
     body: "Posts from people you're connected to — code, questions, wins. "
         'Connect with more people to grow it, or use Discover to find new '
         'faces.',
+    prompt: 'Try reacting to a post:',
+    actionLabel: 'React 👍',
+    resultLabel: 'Nice — that\'s how it feels in the real feed.',
   ),
   _TutorialStep(
     icon: Icons.bolt,
@@ -32,6 +49,9 @@ const _steps = [
     body: 'Posts with Logic Points attached. Solve someone else\'s problem, '
         'get picked as the accepted answer, and the points land in your '
         'ledger.',
+    prompt: 'Try accepting a bounty solution:',
+    actionLabel: 'Accept solution',
+    resultLabel: '+50 Logic Points — paid out the same way for real.',
   ),
   _TutorialStep(
     icon: Icons.work,
@@ -39,12 +59,18 @@ const _steps = [
     body: 'Internships, learnerships and part-time roles posted by '
         'businesses. Apply straight from here — you get matched '
         'automatically when a new one fits your skills.',
+    prompt: 'Try applying to a listing:',
+    actionLabel: 'Apply now',
+    resultLabel: 'Application sent — businesses see this instantly.',
   ),
   _TutorialStep(
     icon: Icons.forum,
     title: 'Messages',
     body: 'Direct messages with anyone you\'re connected to, live and in '
         'real time.',
+    prompt: 'Try sending a quick reply:',
+    actionLabel: 'Send "Sounds good 👍"',
+    resultLabel: 'Delivered — messages arrive live, no refresh needed.',
   ),
   _TutorialStep(
     icon: Icons.person,
@@ -52,14 +78,18 @@ const _steps = [
     body: 'Your skills, experience, CV and portfolio live here — and the '
         'AI assistant is always one tap away if you want help improving '
         'it.',
+    prompt: 'Try asking the assistant something:',
+    actionLabel: 'Ask "What should I add?"',
+    resultLabel: '"Start with a bio and two or three skills."',
   ),
 ];
 
 /// Stream A, §2.6: "an interactive first-run tutorial across the key
-/// screens". A short swipeable walkthrough rather than on-screen coach
-/// marks pointing at live widgets — coach marks would mean reaching into
-/// `AppShell`/`_NavBar`, which nearly every stream touches, just to explain
-/// five tabs.
+/// screens" — each step now requires the user to actually tap a small live
+/// mock-up of that screen's core action before moving on, rather than only
+/// swiping past static text. Kept self-contained in this one file rather
+/// than pointing coach marks at the real `AppShell`/`_NavBar` — that file is
+/// shared across every stream and already under active change elsewhere.
 class TutorialScreen extends ConsumerStatefulWidget {
   const TutorialScreen({super.key});
 
@@ -71,6 +101,9 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
   final _controller = PageController();
   int _index = 0;
   bool _finishing = false;
+
+  // Which steps the user has actually tapped through, not just viewed.
+  final Set<int> _tried = {};
 
   @override
   void dispose() {
@@ -98,6 +131,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
   @override
   Widget build(BuildContext context) {
     final last = _index == _steps.length - 1;
+    final canAdvance = _tried.contains(_index);
 
     return Scaffold(
       body: SafeArea(
@@ -118,7 +152,11 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
                 controller: _controller,
                 itemCount: _steps.length,
                 onPageChanged: (i) => setState(() => _index = i),
-                itemBuilder: (_, i) => _StepView(step: _steps[i]),
+                itemBuilder: (_, i) => _StepView(
+                  step: _steps[i],
+                  tried: _tried.contains(i),
+                  onTry: () => setState(() => _tried.add(i)),
+                ),
               ),
             ),
             Padding(
@@ -142,9 +180,21 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  if (!canAdvance)
+                    Text(
+                      'Tap the card above to continue',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: _finishing
+                    onPressed: _finishing || !canAdvance
                         ? null
                         : last
                             ? _finish
@@ -168,9 +218,15 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
 }
 
 class _StepView extends StatelessWidget {
-  const _StepView({required this.step});
+  const _StepView({
+    required this.step,
+    required this.tried,
+    required this.onTry,
+  });
 
   final _TutorialStep step;
+  final bool tried;
+  final VoidCallback onTry;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +261,75 @@ class _StepView extends StatelessWidget {
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
             ),
           ),
+          const SizedBox(height: 24),
+          _TapToTryCard(step: step, tried: tried, onTry: onTry),
         ],
       ),
+    );
+  }
+}
+
+/// The interactive part of a step: a small mock-up of that screen's core
+/// action, live enough to tap. Tapping is the thing that unlocks "Next" —
+/// swiping past this without touching it isn't enough.
+class _TapToTryCard extends StatelessWidget {
+  const _TapToTryCard({
+    required this.step,
+    required this.tried,
+    required this.onTry,
+  });
+
+  final _TutorialStep step;
+  final bool tried;
+  final VoidCallback onTry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: tried
+          ? Container(
+              key: const ValueKey('result'),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.accent, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      step.resultLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              key: const ValueKey('prompt'),
+              children: [
+                Text(
+                  step.prompt,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.tonal(
+                  onPressed: onTry,
+                  child: Text(step.actionLabel),
+                ),
+              ],
+            ),
     );
   }
 }
