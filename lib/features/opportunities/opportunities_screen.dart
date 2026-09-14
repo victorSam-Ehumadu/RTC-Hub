@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../models/opportunity.dart';
+import '../../models/profile.dart' show Skill;
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../shell/app_shell.dart';
@@ -31,12 +32,17 @@ class _SeekerView extends ConsumerStatefulWidget {
 
 class _SeekerViewState extends ConsumerState<_SeekerView> {
   bool _matchedOnly = true;
+  final Set<String> _selectedSkills = {};
 
   @override
   Widget build(BuildContext context) {
     final listings = _matchedOnly
         ? ref.watch(matchedOpportunitiesProvider)
         : ref.watch(opportunitiesProvider);
+    final me = ref.watch(meProvider);
+    final mySkills = me == null
+        ? const AsyncValue<List<Skill>>.data([])
+        : ref.watch(skillsProvider(me.id));
 
     return Scaffold(
       appBar: const HubAppBar(title: 'Opportunities'),
@@ -62,6 +68,32 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
                   setState(() => _matchedOnly = s.first),
             ),
           ),
+          // Filter the currently-shown list (either toggle above) down to
+          // opportunities matching skills the student has already added to
+          // their own profile — "interests" reuses that existing data
+          // rather than introducing a separate field to maintain.
+          if ((mySkills.valueOrNull ?? const []).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  for (final skill in mySkills.valueOrNull!)
+                    FilterChip(
+                      label: Text(skill.name),
+                      selected: _selectedSkills.contains(skill.name),
+                      onSelected: (v) => setState(() {
+                        if (v) {
+                          _selectedSkills.add(skill.name);
+                        } else {
+                          _selectedSkills.remove(skill.name);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -72,8 +104,18 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
               child: listings.when(
                 loading: () => const Loading(),
                 error: (err, _) => ErrorView(error: err),
-                data: (list) {
+                data: (all) {
+                  final list = _selectedSkills.isEmpty
+                      ? all
+                      : all.where((o) {
+                          return o.requiredSkills.any((required) {
+                            return _selectedSkills.any((selected) =>
+                                selected.toLowerCase() ==
+                                required.toLowerCase());
+                          });
+                        }).toList();
                   if (list.isEmpty) {
+                    final filtering = _selectedSkills.isNotEmpty;
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
@@ -81,20 +123,31 @@ class _SeekerViewState extends ConsumerState<_SeekerView> {
                           height: MediaQuery.sizeOf(context).height * 0.55,
                           child: EmptyState(
                             icon: Icons.work_outline,
-                            title: _matchedOnly
-                                ? 'No matches yet'
-                                : 'No open opportunities',
-                            message: _matchedOnly
-                                ? 'Matching uses your skills, faculty and year. '
-                                    'Add a few skills to your profile.'
-                                : 'Check back once businesses start posting.',
-                            action: _matchedOnly
+                            title: filtering
+                                ? 'No matches for those skills'
+                                : _matchedOnly
+                                    ? 'No matches yet'
+                                    : 'No open opportunities',
+                            message: filtering
+                                ? 'Try clearing a skill filter above.'
+                                : _matchedOnly
+                                    ? 'Matching uses your skills, faculty and '
+                                        'year. Add a few skills to your profile.'
+                                    : 'Check back once businesses start '
+                                        'posting.',
+                            action: filtering
                                 ? OutlinedButton(
-                                    onPressed: () =>
-                                        setState(() => _matchedOnly = false),
-                                    child: const Text('Browse all'),
+                                    onPressed: () => setState(
+                                        () => _selectedSkills.clear()),
+                                    child: const Text('Clear filters'),
                                   )
-                                : null,
+                                : _matchedOnly
+                                    ? OutlinedButton(
+                                        onPressed: () => setState(
+                                            () => _matchedOnly = false),
+                                        child: const Text('Browse all'),
+                                      )
+                                    : null,
                           ),
                         ),
                       ],
