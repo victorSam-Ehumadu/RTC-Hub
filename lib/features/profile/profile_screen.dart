@@ -265,24 +265,12 @@ class _ConnectRow extends ConsumerWidget {
               ),
               error: (_, _) => const SizedBox.shrink(),
               data: (c) {
-                if (c == null) {
-                  return FilledButton.icon(
-                    onPressed: () async {
-                      try {
-                        await ref
-                            .read(connectionRepoProvider)
-                            .request(profile.id);
-                        ref.invalidate(connectionWithProvider(profile.id));
-                        if (context.mounted) {
-                          showMessage(context, 'Request sent.');
-                        }
-                      } catch (error) {
-                        if (context.mounted) showError(context, error);
-                      }
-                    },
-                    icon: const Icon(Icons.person_add_alt, size: 18),
-                    label: const Text('Connect'),
-                  );
+                // null (never interacted) and DECLINED (denied, but the
+                // sender may try again — see migration 0015) both render the
+                // same actionable "Connect" button. Only genuine PENDING is
+                // a dead end for the sender.
+                if (c == null || c.isDeclined) {
+                  return _ConnectButton(profile: profile);
                 }
                 if (c.isAccepted) {
                   return const OutlinedButton(
@@ -307,6 +295,31 @@ class _ConnectRow extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The "Connect" button, shared by the never-interacted and declined-request
+/// states — a decline can be resent (see migration 0015 / [ConnectionRepository.request]).
+class _ConnectButton extends ConsumerWidget {
+  const _ConnectButton({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FilledButton.icon(
+      onPressed: () async {
+        try {
+          await ref.read(connectionRepoProvider).request(profile.id);
+          ref.invalidate(connectionWithProvider(profile.id));
+          if (context.mounted) showMessage(context, 'Request sent.');
+        } catch (error) {
+          if (context.mounted) showError(context, error);
+        }
+      },
+      icon: const Icon(Icons.person_add_alt, size: 18),
+      label: const Text('Connect'),
     );
   }
 }
