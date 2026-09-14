@@ -331,7 +331,7 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+    final unread = ref.watch(unreadCountProvider);
     final onBanner = showBanner ? hubBannerForeground : null;
 
     return AppBar(
