@@ -134,8 +134,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               if (p.bio != null && p.bio!.isNotEmpty) ...[
                 const SectionHeader(title: 'Profile Summary'),
                 Text(p.bio!, style: const TextStyle(height: 1.5)),
+                const SizedBox(height: 16),
               ],
-              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty)
+              if (p.studentInvolvement != null && p.studentInvolvement!.isNotEmpty) ...[
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -148,12 +149,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+              ],
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: _ExperienceSection(userId: p.id, isSelf: isSelf),
                 ),
               ),
+              const SizedBox(height: 16),
               // ─── EXTERNAL LINKS ─────────────────────────────
               if (p.portfolioUrl != null || p.linkedinUrl != null || p.credlyUrl != null) ...[
                 const SectionHeader(title: 'Links'),
@@ -181,16 +185,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                   ],
                 ),
+                const SizedBox(height: 16),
               ],
               // ─── REPUTATION & SKILLS ───────────────────────
               _SkillsSection(userId: p.id, isSelf: isSelf),
+              const SizedBox(height: 16),
               _RecommendationsSection(
                 userId: p.id,
                 isSelf: isSelf,
                 isConnected: connection,
               ),
+              const SizedBox(height: 16),
               // ─── METRICS & WORK ─────────────────────────────
-              if (isSelf) _StatsSection(userId: p.id),
+              if (isSelf) ...[
+                _StatsSection(userId: p.id),
+                const SizedBox(height: 16),
+              ],
               _PostsSection(userId: p.id),
             ],
           ),
