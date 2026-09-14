@@ -1,10 +1,14 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../data/admin_repository.dart';
+import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
+import '../shell/app_shell.dart';
 
 /// Moderation console.
 ///
@@ -32,12 +36,31 @@ class AdminScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
+        // Same banner treatment as `ProfileScreen` and every tab under
+        // `HubAppBar` — the admin portal is a separate app (`main_admin.dart`)
+        // but should still look like part of RTC Hub, not a bare admin panel.
         appBar: AppBar(
-          title: const Text('Admin'),
-          bottom: const TabBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: const HubBanner(),
+          iconTheme: const IconThemeData(color: hubBannerForeground),
+          actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+          title: const Text(
+            'Admin',
+            style: TextStyle(
+              color: hubBannerForeground,
+              fontWeight: FontWeight.w800,
+              shadows: hubBannerTitleShadow,
+            ),
+          ),
+          bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            tabs: [
+            labelColor: hubBannerForeground,
+            unselectedLabelColor: hubBannerForeground.withValues(alpha: 0.62),
+            indicatorColor: AppColors.accent,
+            indicatorWeight: 3,
+            tabs: const [
               Tab(text: 'Overview'),
               Tab(text: 'Accounts'),
               Tab(text: 'Listings'),
@@ -66,7 +89,11 @@ class _OverviewTab extends ConsumerWidget {
     final stats = ref.watch(adminStatsProvider);
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(adminStatsProvider),
+      onRefresh: () async {
+        ref
+          ..invalidate(adminStatsProvider)
+          ..invalidate(adminDashboardProvider);
+      },
       child: stats.when(
         loading: () => const Loading(),
         error: (err, _) => ErrorView(
@@ -75,15 +102,15 @@ class _OverviewTab extends ConsumerWidget {
         ),
         data: (s) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           children: [
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.7,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 1.35,
               children: [
                 _StatTile(
                   label: 'Users',
@@ -107,7 +134,7 @@ class _OverviewTab extends ConsumerWidget {
                   label: 'Bounties',
                   value: s.bounties,
                   icon: Icons.bolt,
-                  color: AppColors.points,
+                  color: AppColors.button,
                 ),
                 _StatTile(
                   label: 'Listings to review',
@@ -123,16 +150,273 @@ class _OverviewTab extends ConsumerWidget {
                 ),
               ],
             ),
+            // §2.7's platform-level metrics: users by type, monthly active
+            // users, registrations over time, content volume, and the
+            // business approval pipeline. Flagged content count is the
+            // "Open flags" tile above — an icon + colour + number is
+            // already a visual indicator, so it isn't repeated as a chart.
+            const _PlatformAnalytics(),
             const SectionHeader(title: 'Broadcast'),
             FilledButton.icon(
               onPressed: () => _announce(context, ref),
               icon: const Icon(Icons.campaign_outlined, size: 18),
               label: const Text('Send an announcement'),
             ),
+            const SectionHeader(title: 'Admins'),
+            OutlinedButton.icon(
+              onPressed: () => _addAdmin(context, ref),
+              icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
+              label: const Text('Add an administrator'),
+            ),
+            const SectionHeader(title: 'Account tools'),
+            OutlinedButton.icon(
+              onPressed: () => _confirmEmail(context, ref),
+              icon: const Icon(Icons.mark_email_read_outlined, size: 18),
+              label: const Text('Confirm an email'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => _resetPassword(context, ref),
+              icon: const Icon(Icons.password_outlined, size: 18),
+              label: const Text('Reset a password'),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Looks up an account by email — shared by [_addAdmin], [_confirmEmail]
+  /// and [_resetPassword], since all three act on a real account and acting
+  /// on the wrong one from a typo'd email is the one mistake worth an extra
+  /// click to avoid. `null` means either the dialog was cancelled or no
+  /// account matched (the latter already shown as a message).
+  ///
+  /// The dialog's own `Navigator.pop` calls are deferred a frame (see
+  /// `close`) rather than fired synchronously from the autofocused field's
+  /// `onSubmitted` — popping in the same frame as that field's focus
+  /// teardown is what caused the blank-screen bug fixed for the "Add a
+  /// skill" dialog (profile_screen.dart); the same shape here gets the same
+  /// fix up front instead of waiting to hit it again.
+  Future<Profile?> _lookupByEmail(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String hint,
+  }) async {
+    final email = TextEditingController();
+
+    void close(BuildContext dialogContext, [Profile? value]) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
+      });
+    }
+
+    final found = await showDialog<Profile?>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: email,
+          autofocus: true,
+          keyboardType: TextInputType.emailAddress,
+          onSubmitted: (_) => close(dialogContext),
+          decoration: InputDecoration(
+            labelText: 'Account email',
+            hintText: hint,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => close(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final profile =
+                  await ref.read(adminRepoProvider).findByEmail(email.text);
+              if (!dialogContext.mounted) return;
+              close(dialogContext, profile);
+            },
+            child: const Text('Look up'),
+          ),
+        ],
+      ),
+    );
+    final emailText = email.text;
+    email.dispose();
+
+    if (found == null && context.mounted) {
+      showMessage(context, 'No account found for "$emailText".');
+    }
+    return found;
+  }
+
+  /// Looks up an existing account by email, confirms, then grants ADMIN.
+  Future<void> _addAdmin(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Add an administrator',
+      hint: 'name@richfield.ac.za',
+    );
+    if (found == null || !context.mounted) return;
+    if (found.isAdmin) {
+      if (context.mounted) {
+        showMessage(context, '${found.displayName} is already an administrator.');
+      }
+      return;
+    }
+    if (!context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Grant admin access?'),
+        content: Text(
+          '${found.displayName} (${found.email}) is currently a '
+          '${found.role} account. Making them an administrator gives them '
+          'full platform access, including account and content moderation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Make administrator'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(adminRepoProvider).promoteToAdmin(found.id);
+      ref
+        ..invalidate(adminStatsProvider)
+        ..invalidate(adminDashboardProvider);
+      if (context.mounted) {
+        showMessage(context, '${found.displayName} is now an administrator.');
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  /// Looks up an account by email, then confirms its signup email without
+  /// the inbox link — see `admin_confirm_email` (migration 0014). For a
+  /// bounced or spam-filtered confirmation email, or a seeded test account.
+  Future<void> _confirmEmail(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Confirm an email',
+      hint: "The account's email",
+    );
+    if (found == null || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm this email?'),
+        content: Text(
+          '${found.displayName} (${found.email}) will be able to sign in '
+          "without clicking the link in their inbox.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm email'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(adminRepoProvider).confirmEmail(found.id);
+      if (context.mounted) {
+        showMessage(context, "${found.displayName}'s email is confirmed.");
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
+  }
+
+  /// Looks up an account by email, then sets a new password directly — see
+  /// `admin_reset_password` (migration 0014). Same "can't reach the inbox"
+  /// cases as [_confirmEmail]; the account's existing sessions are revoked
+  /// as part of the reset, so tell them the new password out of band.
+  Future<void> _resetPassword(BuildContext context, WidgetRef ref) async {
+    final found = await _lookupByEmail(
+      context,
+      ref,
+      title: 'Reset a password',
+      hint: "The account's email",
+    );
+    if (found == null || !context.mounted) return;
+
+    final password = TextEditingController();
+    void close(BuildContext dialogContext, [String? value]) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
+      });
+    }
+
+    final newPassword = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('New password for ${found.displayName}'),
+        content: TextField(
+          controller: password,
+          autofocus: true,
+          obscureText: true,
+          onSubmitted: (v) => close(dialogContext, v),
+          decoration: const InputDecoration(
+            labelText: 'New password',
+            helperText: 'At least 8 characters. This signs them out '
+                'everywhere else — share the new password out of band.',
+            helperMaxLines: 2,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => close(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => close(dialogContext, password.text),
+            child: const Text('Set password'),
+          ),
+        ],
+      ),
+    );
+    password.dispose();
+
+    if (newPassword == null) return;
+    if (newPassword.length < 8) {
+      if (context.mounted) {
+        showMessage(context, 'Password must be at least 8 characters.');
+      }
+      return;
+    }
+
+    try {
+      await ref.read(adminRepoProvider).resetPassword(found.id, newPassword);
+      if (context.mounted) {
+        showMessage(context, "${found.displayName}'s password is reset.");
+      }
+    } catch (error) {
+      if (context.mounted) showError(context, error);
+    }
   }
 
   Future<void> _announce(BuildContext context, WidgetRef ref) async {
@@ -207,25 +491,357 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 19, color: color),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '$value',
+            style: monoStyle(size: 27, weight: FontWeight.w800, color: color),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color:
+                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// §2.7's platform-level admin metrics, charted. Watches its own provider
+/// separately from [adminStatsProvider] so a failure here (a new RPC that
+/// hasn't run yet, say) doesn't take down the action-grid tiles above it.
+class _PlatformAnalytics extends ConsumerWidget {
+  const _PlatformAnalytics();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashboard = ref.watch(adminDashboardProvider);
+
+    return dashboard.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: DottedProgressIndicator()),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: ErrorView(
+          error: err,
+          onRetry: () => ref.invalidate(adminDashboardProvider),
+        ),
+      ),
+      data: (d) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(title: 'Users by type'),
+          _CategoryBars(items: d.usersByRole, colorFor: roleColor),
+          const SizedBox(height: 6),
+          const SectionHeader(title: 'Monthly active users'),
+          _ActiveUsersCard(mau: d.monthlyActiveUsers, totalUsers: d.totalUsers),
+          const SizedBox(height: 6),
+          const SectionHeader(title: 'New registrations'),
+          _RegistrationsTrend(series: d.registrationsByDay),
+          const SizedBox(height: 6),
+          const SectionHeader(title: 'Content volume'),
+          _CategoryBars(items: d.contentVolume, colorFor: _contentColor),
+          const SizedBox(height: 6),
+          const SectionHeader(title: 'Business approval pipeline'),
+          _CategoryBars(items: d.businessPipeline, colorFor: _pipelineColor),
+        ],
+      ),
+    );
+  }
+}
+
+Color _contentColor(String kind) => switch (kind) {
+      'TEXT' => AppColors.button,
+      'CODE' => const Color(0xFFA855F7),
+      'VIDEO' => AppColors.danger,
+      'BOUNTY' => AppColors.points,
+      'OPPORTUNITY' => AppColors.accent,
+      _ => AppColors.darkMuted,
+    };
+
+Color _pipelineColor(String status) => switch (status) {
+      'PENDING' => AppColors.points,
+      'ACTIVE' => AppColors.accent,
+      'SUSPENDED' => AppColors.danger,
+      'REJECTED' => AppColors.darkMuted,
+      _ => AppColors.darkMuted,
+    };
+
+String _titleCase(String s) =>
+    s.isEmpty ? s : '${s[0]}${s.substring(1).toLowerCase()}';
+
+/// A ranked, proportional-width bar per category — same shape as the
+/// student dashboard's skill bars (see `student_dashboard_screen.dart`),
+/// duplicated privately here rather than shared since each screen owns
+/// its own file per WORKPLAN.
+class _CategoryBars extends StatelessWidget {
+  const _CategoryBars({required this.items, required this.colorFor});
+
+  final List<CategoryCount> items;
+  final Color Function(String label) colorFor;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+
+    if (items.isEmpty || items.every((i) => i.count == 0)) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Text('No data yet.', style: TextStyle(fontSize: 12.5, color: muted)),
+      );
+    }
+
+    final maxCount =
+        items.map((i) => i.count).reduce((a, b) => a > b ? a : b).clamp(1, 1 << 31);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: Column(
+        children: [
+          for (final (i, item) in items.indexed) ...[
+            _CategoryBarRow(item: item, maxCount: maxCount, color: colorFor(item.label)),
+            if (i != items.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryBarRow extends StatelessWidget {
+  const _CategoryBarRow({required this.item, required this.maxCount, required this.color});
+
+  final CategoryCount item;
+  final int maxCount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = maxCount == 0 ? 0.0 : item.count / maxCount;
+    return Row(
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(
+            _titleCase(item.label),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 14,
+              backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 32,
+          child: Text(
+            '${item.count}',
+            textAlign: TextAlign.right,
+            style: monoStyle(size: 12, weight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Monthly active users shown as a proportion of everyone registered,
+/// rather than a bare number — a progress bar is the "visual indicator"
+/// §2.7 asks for when a full time series isn't the natural shape for a
+/// single-value metric.
+class _ActiveUsersCard extends StatelessWidget {
+  const _ActiveUsersCard({required this.mau, required this.totalUsers});
+
+  final int mau;
+  final int totalUsers;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+    final pct = totalUsers == 0 ? 0.0 : (mau / totalUsers * 100);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 19, color: color),
-          Text('$value', style: monoStyle(size: 24, weight: FontWeight.w800)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color:
-                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$mau',
+                style: monoStyle(size: 22, weight: FontWeight.w800, color: AppColors.accent),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'of $totalUsers registered users signed in this month',
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: (pct / 100).clamp(0, 1),
+              minHeight: 10,
+              backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
+              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
             ),
+          ),
+          const SizedBox(height: 6),
+          Text('${pct.toStringAsFixed(0)}% monthly active', style: TextStyle(fontSize: 11.5, color: muted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// A total plus a 30-day line — same shape as the student dashboard's
+/// `_TrendCard`, duplicated privately for the same file-ownership reason
+/// as [_CategoryBars].
+class _RegistrationsTrend extends StatelessWidget {
+  const _RegistrationsTrend({required this.series});
+
+  final List<DailyMetric> series;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final total = series.fold<int>(0, (sum, d) => sum + d.value);
+    final maxY = series.fold<double>(1, (m, d) => d.value > m ? d.value.toDouble() : m);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$total',
+                style: monoStyle(size: 22, weight: FontWeight.w800, color: AppColors.button),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('new registrations, last 30 days', style: TextStyle(fontSize: 12, color: muted)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 90,
+            child: series.isEmpty
+                ? Center(
+                    child: Text('No data yet', style: TextStyle(fontSize: 12, color: muted)),
+                  )
+                : LineChart(
+                    LineChartData(
+                      minX: 0,
+                      maxX: (series.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: maxY,
+                      gridData: const FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      titlesData: const FlTitlesData(show: false),
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipColor: (_) => Theme.of(context).colorScheme.surface,
+                          getTooltipItems: (touched) => touched.map((spot) {
+                            final day = series[spot.x.toInt()];
+                            return LineTooltipItem(
+                              '${day.value} · ${day.date.month}/${day.date.day}',
+                              monoStyle(size: 11, weight: FontWeight.w700, color: AppColors.button),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: [
+                            for (var i = 0; i < series.length; i++)
+                              FlSpot(i.toDouble(), series[i].value.toDouble()),
+                          ],
+                          isCurved: false,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          color: AppColors.button,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppColors.button.withValues(alpha: 0.12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),

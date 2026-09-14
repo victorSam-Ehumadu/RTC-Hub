@@ -30,6 +30,31 @@ class AdminRepository {
   Future<void> deleteUser(String userId) =>
       db.from('profiles').delete().eq('id', userId);
 
+  /// Looks up any profile by email, regardless of status — `profiles_select`
+  /// grants an admin caller that visibility. Used to resolve an email to a
+  /// user id before [promoteToAdmin].
+  Future<Profile?> findByEmail(String email) async {
+    final row = await db
+        .from('profiles')
+        .select()
+        .eq('email', email.trim().toLowerCase())
+        .maybeSingle();
+    return row == null ? null : Profile.fromMap(row);
+  }
+
+  /// Grants ADMIN and activates the account in one write.
+  ///
+  /// No RPC needed for this one: `profiles_update_own` already lets an admin
+  /// update any row, and `trg_profiles_guard` only reverts role/status
+  /// changes made by a caller who *isn't* an admin — since whoever calls
+  /// this already is one, the trigger lets it straight through. That only
+  /// holds once at least one admin exists to make the call; the very first
+  /// admin still has to be bootstrapped by hand (see the commented block at
+  /// the bottom of migration 0001) because nobody exists yet to authorize it.
+  Future<void> promoteToAdmin(String userId) => db
+      .from('profiles')
+      .update({'role': 'ADMIN', 'status': 'ACTIVE'}).eq('id', userId);
+
   /// Listings waiting for review, plus their business.
   Future<List<Opportunity>> pendingOpportunities() async {
     final rows = await db
@@ -65,6 +90,26 @@ class AdminRepository {
       'resolved_by': requireUserId,
     }).eq('id', flagId);
   }
+
+  /// Confirms a signup email without the confirmation link — for accounts
+  /// an admin has otherwise verified (a bounced inbox, a spam-filtered
+  /// institutional address, a seeded test account). `admin_confirm_email`
+  /// (migration 0014) writes `auth.users.email_confirmed_at` directly,
+  /// something no RLS policy or client write could ever reach, and logs
+  /// the action to `admin_account_actions`.
+  Future<void> confirmEmail(String userId) =>
+      db.rpc('admin_confirm_email', params: {'p_user_id': userId});
+
+  /// Sets a new password directly, bypassing the reset-email flow — same
+  /// "can't reach the inbox" cases as [confirmEmail]. `admin_reset_password`
+  /// (migration 0014) refuses a password under 8 characters, refuses to
+  /// target another administrator's account, and revokes the account's
+  /// existing sessions so the old password stops working immediately.
+  Future<void> resetPassword(String userId, String newPassword) =>
+      db.rpc('admin_reset_password', params: {
+        'p_user_id': userId,
+        'p_new_password': newPassword,
+      });
 
   Future<void> announce({
     required String title,
@@ -103,6 +148,92 @@ class AdminRepository {
     final rows = await query;
     return rows.length;
   }
+
+  /// §2.7's administrator dashboard, in full except flagged content count
+  /// (already a visual [AdminStats] tile): users by type, monthly active
+  /// users, registrations over time, content volume, and the business
+  /// approval pipeline. Every field comes from a SECURITY DEFINER RPC
+  /// (migration 0009) that re-checks `is_admin()` itself, since these
+  /// aggregate across every account/post/opportunity regardless of what
+  /// RLS would otherwise let the caller see.
+  Future<AdminDashboard> dashboard() async {
+    final results = await Future.wait<dynamic>([
+      db.rpc('admin_users_by_role'),
+      db.rpc('admin_monthly_active_users'),
+      db.rpc('admin_registrations_by_day', params: {'p_days': 30}),
+      db.rpc('admin_content_volume'),
+      db.rpc('admin_business_pipeline'),
+    ]);
+
+    List<CategoryCount> categories(
+      List<dynamic> rows,
+      String labelKey,
+      String countKey,
+    ) =>
+        rows
+            .cast<Map<String, dynamic>>()
+            .map((row) => CategoryCount(
+                  label: row[labelKey] as String,
+                  count: (row[countKey] as num).toInt(),
+                ))
+            .toList();
+
+    final byRole = categories(results[0] as List, 'role', 'total');
+    final regRows = (results[2] as List).cast<Map<String, dynamic>>();
+
+    return AdminDashboard(
+      usersByRole: byRole,
+      totalUsers: byRole.fold<int>(0, (sum, c) => sum + c.count),
+      monthlyActiveUsers: (results[1] as num?)?.toInt() ?? 0,
+      registrationsByDay: regRows
+          .map((row) => DailyMetric(
+                date: DateTime.tryParse((row['day'] ?? '') as String) ??
+                    DateTime.now(),
+                value: (row['signups'] as num).toInt(),
+              ))
+          .toList(),
+      contentVolume: categories(results[3] as List, 'kind', 'total'),
+      businessPipeline: categories(results[4] as List, 'status', 'total'),
+    );
+  }
+}
+
+/// The five §2.7 platform-level metrics that aren't a plain count —
+/// [AdminRepository.dashboard]'s return shape for the Overview tab's chart
+/// section.
+class AdminDashboard {
+  const AdminDashboard({
+    required this.usersByRole,
+    required this.totalUsers,
+    required this.monthlyActiveUsers,
+    required this.registrationsByDay,
+    required this.contentVolume,
+    required this.businessPipeline,
+  });
+
+  final List<CategoryCount> usersByRole;
+  final int totalUsers;
+
+  /// Accounts with a sign-in inside the last 30 days — see
+  /// `admin_monthly_active_users()` (migration 0009).
+  final int monthlyActiveUsers;
+  final List<DailyMetric> registrationsByDay;
+
+  /// Posts split by [Post.type] plus a single "OPPORTUNITY" row.
+  final List<CategoryCount> contentVolume;
+
+  /// BUSINESS-role profiles grouped by [Profile.status].
+  final List<CategoryCount> businessPipeline;
+}
+
+/// A label paired with a count — every §2.7 admin breakdown that isn't a
+/// time series (users by role, content volume by kind, business pipeline
+/// by status) shares this shape.
+class CategoryCount {
+  const CategoryCount({required this.label, required this.count});
+
+  final String label;
+  final int count;
 }
 
 class AdminStats {
@@ -221,6 +352,77 @@ class AnalyticsRepository {
             ))
         .toList();
   }
+
+  /// §2.7's business dashboard, in full: applicant pipeline per listing,
+  /// engagement rate on listings, candidate skill distribution across
+  /// programmes, applicant demographics by programme and year, and the
+  /// company profile's own reach. See migration 0013 for why every read
+  /// here runs as the caller (invoker rights) rather than SECURITY
+  /// DEFINER — §2.1's "business users may not access ... personal
+  /// information beyond what a student has explicitly made visible" is
+  /// enforced by RLS on `profiles`, and invoker rights is what keeps that
+  /// enforced inside these aggregates instead of bypassing it.
+  Future<BusinessStats> forBusiness(String userId) async {
+    final results = await Future.wait<dynamic>([
+      db.rpc('business_listing_pipeline'),
+      db.rpc('business_applicant_skill_distribution', params: {'p_limit': 8}),
+      db.rpc('business_applicant_demographics'),
+      db
+          .from('profile_analytics')
+          .select('date, profile_views')
+          .eq('user_id', userId)
+          .order('date', ascending: false)
+          .limit(30),
+    ]);
+
+    final pipeline = (results[0] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => ListingPipeline(
+              title: (row['title'] ?? '') as String,
+              status: (row['status'] ?? 'PENDING') as String,
+              applicants: (row['applicant_count'] as num).toInt(),
+              reach: (row['reach'] as num).toInt(),
+            ))
+        .toList();
+
+    final skills = (results[1] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => CandidateSkill(
+              skill: row['skill'] as String,
+              count: (row['total'] as num).toInt(),
+              topCourse: row['top_course'] as String?,
+            ))
+        .toList();
+
+    final demographics = (results[2] as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => CategoryCount(
+              label: '${row['course']} · ${row['academic_year']}',
+              count: (row['total'] as num).toInt(),
+            ))
+        .toList();
+
+    final daily = (results[3] as List).cast<Map<String, dynamic>>();
+    final profileViews = daily.fold<int>(
+      0,
+      (sum, row) => sum + ((row['profile_views'] as int?) ?? 0),
+    );
+    final viewsByDay = daily.reversed
+        .map((row) => DailyMetric(
+              date: DateTime.tryParse((row['date'] ?? '') as String) ??
+                  DateTime.now(),
+              value: (row['profile_views'] as int?) ?? 0,
+            ))
+        .toList();
+
+    return BusinessStats(
+      pipeline: pipeline,
+      candidateSkills: skills,
+      applicantDemographics: demographics,
+      profileViews: profileViews,
+      viewsByDay: viewsByDay,
+    );
+  }
 }
 
 class StudentStats {
@@ -288,4 +490,80 @@ class SkillCount {
 
   final String skill;
   final int count;
+}
+
+/// §2.7's business-dashboard return shape — see
+/// [AnalyticsRepository.forBusiness].
+class BusinessStats {
+  const BusinessStats({
+    required this.pipeline,
+    required this.candidateSkills,
+    required this.applicantDemographics,
+    required this.profileViews,
+    required this.viewsByDay,
+  });
+
+  /// One entry per posted listing (any status) — §2.7's "total applicant
+  /// pipeline per posted opportunity" plus, per listing, what "engagement
+  /// rate on job listings" is computed from.
+  final List<ListingPipeline> pipeline;
+
+  /// §2.7's "candidate skill distribution across Richfield programmes" —
+  /// scoped to the caller's own applicants (see migration 0013's header
+  /// for why), each skill paired with the programme it's most common in
+  /// among those applicants.
+  final List<CandidateSkill> candidateSkills;
+
+  /// §2.7's "demographic breakdown of applicants by programme and year of
+  /// study" — one [CategoryCount] per (course, academic year) combination,
+  /// label already joined as "Course · Year".
+  final List<CategoryCount> applicantDemographics;
+
+  /// §2.7's "overall reach and visibility statistics for the company
+  /// profile" — same `profile_analytics.profile_views` a student's
+  /// dashboard reads, just for the business's own profile.
+  final int profileViews;
+  final List<DailyMetric> viewsByDay;
+}
+
+/// One posted listing's funnel: how many people it reached (distinct
+/// viewers, see `opportunity_views` in migration 0013) versus how many of
+/// them applied.
+class ListingPipeline {
+  const ListingPipeline({
+    required this.title,
+    required this.status,
+    required this.applicants,
+    required this.reach,
+  });
+
+  final String title;
+  final String status;
+  final int applicants;
+
+  /// Distinct viewers. Always 0 for a PENDING/REJECTED listing — students
+  /// only ever see ACTIVE ones — so this is never a listing's fault to
+  /// display as a literal 0% engagement rate; the dashboard should read it
+  /// as "not published yet" instead.
+  final int reach;
+
+  /// Applicants ÷ reach, as a 0–100 percentage. Null (not 0) when nobody
+  /// has seen the listing yet, so the UI can tell "no engagement" apart
+  /// from "no data to compute one".
+  double? get engagementRate => reach == 0 ? null : (applicants / reach) * 100;
+}
+
+/// A skill among the caller's applicants, plus the programme it's most
+/// common in — see `business_applicant_skill_distribution()` (migration
+/// 0010) for how [topCourse] is picked.
+class CandidateSkill {
+  const CandidateSkill({
+    required this.skill,
+    required this.count,
+    this.topCourse,
+  });
+
+  final String skill;
+  final int count;
+  final String? topCourse;
 }

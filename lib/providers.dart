@@ -275,6 +275,15 @@ final openFlagsProvider =
   return ref.watch(adminRepoProvider).openFlags();
 });
 
+/// §2.7's platform-level admin metrics — users by type, MAU, registrations
+/// over time, content volume, business pipeline. Separate from
+/// [adminStatsProvider] (the action-grid counts) so refreshing one doesn't
+/// re-fetch the other.
+final adminDashboardProvider =
+    FutureProvider.autoDispose<AdminDashboard>((ref) {
+  return ref.watch(adminRepoProvider).dashboard();
+});
+
 final studentStatsProvider =
     FutureProvider.autoDispose.family<StudentStats, String>((ref, userId) {
   return ref.watch(analyticsRepoProvider).forStudent(userId);
@@ -283,4 +292,12 @@ final studentStatsProvider =
 /// Platform-wide, not per-user — no `.family` needed.
 final wantedSkillsProvider = FutureProvider.autoDispose<List<SkillCount>>((ref) {
   return ref.watch(analyticsRepoProvider).wantedSkills();
+});
+
+/// §2.7's business dashboard — applicant pipeline, engagement rate,
+/// candidate skill distribution, applicant demographics, and company
+/// profile reach. See `AnalyticsRepository.forBusiness`.
+final businessStatsProvider =
+    FutureProvider.autoDispose.family<BusinessStats, String>((ref, userId) {
+  return ref.watch(analyticsRepoProvider).forBusiness(userId);
 });

@@ -268,7 +268,16 @@ class _BusinessView extends ConsumerWidget {
     final listings = ref.watch(myOpportunitiesProvider);
 
     return Scaffold(
-      appBar: const HubAppBar(title: 'Your listings'),
+      appBar: HubAppBar(
+        title: 'Your listings',
+        actions: [
+          IconButton(
+            tooltip: 'Dashboard',
+            onPressed: () => context.push('/business-dashboard'),
+            icon: const Icon(Icons.trending_up),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/post-opportunity'),
         icon: const Icon(Icons.add),

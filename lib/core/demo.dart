@@ -642,6 +642,38 @@ const demoWantedSkills = [
   SkillCount(skill: 'UI/UX Design', count: 4),
 ];
 
+final demoBusinessStats = BusinessStats(
+  pipeline: const [
+    ListingPipeline(
+      title: 'Junior Flutter Developer (Internship)',
+      status: 'ACTIVE',
+      applicants: 34,
+      reach: 210,
+    ),
+    ListingPipeline(
+      title: 'Backend Learnership — Node & Postgres',
+      status: 'ACTIVE',
+      applicants: 61,
+      reach: 340,
+    ),
+  ],
+  candidateSkills: const [
+    CandidateSkill(skill: 'Flutter', count: 22, topCourse: 'BSc IT'),
+    CandidateSkill(skill: 'SQL', count: 18, topCourse: 'BSc IT'),
+    CandidateSkill(skill: 'JavaScript', count: 9, topCourse: 'Dip. Software Dev'),
+  ],
+  applicantDemographics: const [
+    CategoryCount(label: 'BSc IT · 3rd Year', count: 28),
+    CategoryCount(label: 'BSc IT · 2nd Year', count: 15),
+    CategoryCount(label: 'Dip. Software Dev · Final Year', count: 9),
+  ],
+  profileViews: 96,
+  viewsByDay: [
+    for (var i = 29; i >= 0; i--)
+      DailyMetric(date: _daysAgo(i), value: 1 + ((i * 5) % 7)),
+  ],
+);
+
 const demoAdminStats = AdminStats(
   totalUsers: 486,
   pendingUsers: 7,
@@ -1296,6 +1328,12 @@ class DemoAdminRepository extends AdminRepository {
   }
 
   @override
+  Future<void> confirmEmail(String userId) async {}
+
+  @override
+  Future<void> resetPassword(String userId, String newPassword) async {}
+
+  @override
   Future<void> announce({
     required String title,
     required String body,
@@ -1314,6 +1352,9 @@ class DemoAnalyticsRepository extends AnalyticsRepository {
 
   @override
   Future<List<SkillCount>> wantedSkills() async => demoWantedSkills;
+
+  @override
+  Future<BusinessStats> forBusiness(String userId) async => demoBusinessStats;
 }
 
 class DemoStorageRepository extends StorageRepository {

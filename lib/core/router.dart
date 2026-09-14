@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_screen.dart';
+import '../features/analytics/business_dashboard_screen.dart';
 import '../features/analytics/student_dashboard_screen.dart';
 import '../features/assistant/assistant_screen.dart';
 import '../features/auth/login_screen.dart';
@@ -150,6 +151,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/dashboard',
         builder: (_, _) => const StudentDashboardScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/business-dashboard',
+        builder: (_, _) => const BusinessDashboardScreen(),
       ),
 
       // Stream A (AI assistant). /onboarding and /tutorial are pushed by

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../core/supabase.dart';
 import '../models/opportunity.dart';
 
@@ -18,7 +20,9 @@ class OpportunityRepository {
     if (type != null) query = query.eq('type', type);
 
     final rows = await query.order('created_at', ascending: false);
-    return _markApplied(rows.map(Opportunity.fromMap).toList());
+    final list = await _markApplied(rows.map(Opportunity.fromMap).toList());
+    unawaited(_recordViews(list));
+    return list;
   }
 
   /// Listings ranked against the student's skills, faculty and year.
@@ -43,6 +47,7 @@ class OpportunityRepository {
     final ranked = [
       for (final o in list) o.withMatch(byId[o.id] ?? 0),
     ]..sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
+    unawaited(_recordViews(ranked));
     return ranked;
   }
 
@@ -120,6 +125,24 @@ class OpportunityRepository {
   Future<void> setApplicationStatus(String applicationId, String status) => db
       .from('opportunity_applications')
       .update({'status': status}).eq('id', applicationId);
+
+  /// Counts these listings as "reached" for the business dashboard's
+  /// engagement-rate metric (§2.7) — one call per page load with every id
+  /// on screen, not one per card. Fire-and-forget like `_logSkillSearch`
+  /// and `recordView`: `record_opportunity_views` (migration 0013) only
+  /// counts a STUDENT/ALUMNI caller and never a listing's own owner, so
+  /// this is safe to call unconditionally, including for a business
+  /// account that somehow reaches this method.
+  Future<void> _recordViews(List<Opportunity> list) async {
+    if (list.isEmpty) return;
+    try {
+      await db.rpc('record_opportunity_views', params: {
+        'p_ids': [for (final o in list) o.id],
+      });
+    } catch (_) {
+      // analytics only
+    }
+  }
 
   Future<List<Opportunity>> _markApplied(List<Opportunity> list) async {
     if (list.isEmpty) return list;
