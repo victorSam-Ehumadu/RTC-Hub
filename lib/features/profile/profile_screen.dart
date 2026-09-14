@@ -39,6 +39,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  void _toggleTheme() {
+    final currentMode = ref.read(themeModeProvider);
+    final newMode = currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    ref.read(themeModeProvider.notifier).state = newMode;
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(meProvider);
@@ -94,6 +100,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               tooltip: 'Assistant',
               onPressed: () => context.push('/assistant'),
               icon: const Icon(Icons.smart_toy_outlined),
+            ),
+            IconButton(
+              tooltip: 'Light/Dark',
+              onPressed: _toggleTheme,
+              icon: MediaQuery.of(context).platformBrightness == Brightness.dark
+                  ? const Icon(Icons.light_mode)
+                  : const Icon(Icons.dark_mode),
             ),
             IconButton(
               tooltip: 'Edit',

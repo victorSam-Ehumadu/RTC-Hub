@@ -8,6 +8,7 @@ import 'core/env.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,12 +44,14 @@ class RtcHubApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       title: 'Richfield Community',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.dark, // the terminal look is the default
+      themeMode: themeMode,
       routerConfig: ref.watch(routerProvider),
     );
   }

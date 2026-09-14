@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -17,6 +18,13 @@ import 'models/opportunity.dart';
 import 'models/post.dart';
 import 'models/profile.dart';
 import 'models/social.dart';
+
+// ─── App Settings ──────────────────────────────────────────────
+
+/// Theme mode state provider — user's light/dark preference.
+final themeModeProvider = StateProvider<ThemeMode>((ref) {
+  return ThemeMode.dark; // Default to dark (terminal look)
+});
 
 // ─── Repositories ─────────────────────────────────────────────
 
