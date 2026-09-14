@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/admin/admin_screen.dart';
 import '../features/analytics/business_dashboard_screen.dart';
 import '../features/analytics/student_dashboard_screen.dart';
+import '../features/assistant/assistant_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
 import '../features/bounty/bounty_screen.dart';
@@ -15,6 +16,9 @@ import '../features/feed/post_detail_screen.dart';
 import '../features/messages/chat_screen.dart';
 import '../features/messages/conversations_screen.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/onboarding/cv_skills_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
+import '../features/onboarding/tutorial_screen.dart';
 import '../features/opportunities/create_opportunity_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/profile/edit_profile_screen.dart';
@@ -152,6 +156,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         path: '/business-dashboard',
         builder: (_, _) => const BusinessDashboardScreen(),
+      ),
+
+      // Stream A (AI assistant). /onboarding and /tutorial are pushed by
+      // AppShell on first login (see app_shell.dart); /assistant and
+      // /cv-skills are reachable any time afterwards.
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/tutorial',
+        builder: (_, _) => const TutorialScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/onboarding',
+        builder: (_, _) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/assistant',
+        builder: (_, _) => const AssistantScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/cv-skills',
+        builder: (_, _) => const CvSkillsScreen(),
       ),
     ],
   );

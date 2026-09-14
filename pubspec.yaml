@@ -44,6 +44,8 @@ dependencies:
   fl_chart: ^1.2.0
   google_fonts: ^8.2.1
   path: ^1.9.1
+  http: ^1.2.0
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
