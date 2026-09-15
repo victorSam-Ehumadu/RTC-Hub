@@ -34,3 +34,7 @@ TestTest
 
 Business@1
 
+xcrun simctl boot "iPhone 16e"
+ open -a Simulator
+ flutter devices
+ flutter run --dart-define-from-file=env.json
