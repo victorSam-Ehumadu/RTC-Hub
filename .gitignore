@@ -56,6 +56,9 @@ env.json
 env.*.json
 !env.example.json
 
+# Firebase Hosting local cache
+.firebase/
+
 # Android
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
