@@ -72,6 +72,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Disabled: image_cropper (needs TOCropViewController >=3.1.2) and
+  # file_picker's iOS media picker (pins TOCropViewController <3.0.0 via
+  # DKImagePickerController) have non-overlapping version ranges under SPM.
+  # We only use file_picker for FileType.custom document uploads, never its
+  # media/gallery picker, so falling back to CocoaPods and disabling that
+  # unused subspec (see ios/Podfile) resolves it with no feature loss.
+  config:
+    enable-swift-package-manager: false
+
   assets:
     - assets/images/
 
