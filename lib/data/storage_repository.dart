@@ -14,6 +14,7 @@ class StorageRepository {
 
   static const avatars = 'avatars';
   static const postMedia = 'post-media';
+  static const postAttachments = 'post-attachments';
   static const documents = 'documents';
   static const verification = 'verification';
 

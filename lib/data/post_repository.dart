@@ -108,6 +108,7 @@ class PostRepository {
     String? thumbnailUrl,
     bool isBounty = false,
     String? bountyModule,
+    List<String>? attachmentUrls,
   }) async {
     // bounty_points / bounty_solved / is_flagged are set by trg_posts_guard;
     // sending them from here would be ignored anyway.
@@ -123,6 +124,7 @@ class PostRepository {
           'thumbnail_url': thumbnailUrl,
           'is_bounty': isBounty,
           'bounty_module': bountyModule,
+          'attachment_urls': attachmentUrls,
         })
         .select(_postSelect)
         .single();

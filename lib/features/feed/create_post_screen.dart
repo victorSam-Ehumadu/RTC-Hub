@@ -1,9 +1,14 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../data/storage_repository.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 
@@ -30,6 +35,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   bool _attachCode = false;
   String _language = 'dart';
   bool _busy = false;
+  bool _uploadingAttachments = false;
+
+  // Attachment tracking: stores file paths and uploaded URLs
+  final List<File> _attachedFiles = [];
+  final List<String> _uploadedFileUrls = [];
+  final List<File> _attachedImages = [];
+  final List<String> _uploadedImageUrls = [];
 
   @override
   void dispose() {
@@ -39,6 +51,62 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1920,
+      maxHeight: 1920,
+    );
+    if (images.isEmpty) return;
+    setState(() => _attachedImages.addAll(images.map((i) => File(i.path))));
+  }
+
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: true,
+      onFileLoading: (status) => setState(() => _uploadingAttachments = true),
+    );
+    if (result?.files.isEmpty ?? true) return;
+    setState(() {
+      _attachedFiles.addAll(result!.files.map((f) => File(f.path!)));
+      _uploadingAttachments = false;
+    });
+  }
+
+  Future<void> _uploadAttachments() async {
+    if (_attachedFiles.isEmpty && _attachedImages.isEmpty) return;
+
+    setState(() => _uploadingAttachments = true);
+    try {
+      final storage = ref.read(storageRepoProvider);
+
+      // Upload images
+      for (final image in _attachedImages) {
+        final url = await storage.upload(
+          image,
+          bucket: StorageRepository.postAttachments,
+        );
+        _uploadedImageUrls.add(url);
+      }
+
+      // Upload files
+      for (final file in _attachedFiles) {
+        final url = await storage.upload(
+          file,
+          bucket: StorageRepository.postAttachments,
+        );
+        _uploadedFileUrls.add(url);
+      }
+    } catch (error) {
+      if (mounted) showError(context, error);
+      rethrow;
+    } finally {
+      if (mounted) setState(() => _uploadingAttachments = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (_content.text.trim().isEmpty) {
       showMessage(context, 'Write something first.');
@@ -46,6 +114,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
     setState(() => _busy = true);
     try {
+      // Upload attachments first
+      await _uploadAttachments();
+
+      // Combine all attachment URLs
+      final allAttachments = [..._uploadedImageUrls, ..._uploadedFileUrls];
+
       await ref.read(postRepoProvider).create(
             content: _content.text,
             type: _isBounty
@@ -59,6 +133,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             bountyModule: _isBounty && _module.text.trim().isNotEmpty
                 ? _module.text.trim()
                 : null,
+            attachmentUrls: allAttachments.isNotEmpty ? allAttachments : null,
           );
 
       ref.invalidate(feedProvider);
@@ -173,6 +248,134 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 decoration: const InputDecoration(
                   hintText: 'Paste your code here',
                   alignLabelWithHint: true,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            const SectionHeader(title: 'Attachments'),
+            Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: _uploadingAttachments ? null : _pickImages,
+                  icon: const Icon(Icons.image_outlined),
+                  label: const Text('Add Images'),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: _uploadingAttachments ? null : _pickFiles,
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Add Files'),
+                ),
+              ],
+            ),
+
+            // Display selected images
+            if (_attachedImages.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Images (${_attachedImages.length})',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (int index = 0; index < _attachedImages.length; index++)
+                    Stack(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: FileImage(_attachedImages[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: GestureDetector(
+                            onTap: () => setState(
+                              () => _attachedImages.removeAt(index),
+                            ),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black87,
+                              ),
+                              padding: const EdgeInsets.all(2),
+                              child: const Icon(
+                                Icons.close,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+
+            // Display selected files
+            if (_attachedFiles.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Files (${_attachedFiles.length})',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 8),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _attachedFiles.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 4),
+                itemBuilder: (context, index) {
+                  final fileName = _attachedFiles[index].path.split('/').last;
+                  return Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.attach_file, size: 20),
+                      title: Text(
+                        fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: () =>
+                            setState(() => _attachedFiles.removeAt(index)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+
+            if (_uploadingAttachments) ...[
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Uploading attachments...', style: TextStyle(fontSize: 12)),
+                  ],
                 ),
               ),
             ],
