@@ -70,6 +70,23 @@ class AuthRepository {
   Future<void> sendPasswordReset(String email) =>
       db.auth.resetPasswordForEmail(email.trim().toLowerCase());
 
+  /// Change the signed-in user's password. Requires the old password for verification.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      db.rpc('user_change_password', params: {
+        'p_old_password': currentPassword,
+        'p_new_password': newPassword,
+      });
+
+  /// Permanently delete the signed-in user's account and all associated data.
+  /// Requires the password for verification. This operation cannot be undone.
+  Future<void> deleteAccount({required String password}) =>
+      db.rpc('user_delete_account', params: {
+        'p_password': password,
+      });
+
   /// The signed-in user's own profile row.
   ///
   /// Returns null in the brief window after signup where the auth user exists
