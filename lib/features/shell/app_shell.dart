@@ -438,36 +438,20 @@ class _HubIconButtonState extends State<HubIconButton> {
   }
 }
 
-/// The Richfield banner image with a left-to-right dark scrim, sized to sit
-/// behind an `AppBar` via `flexibleSpace`. Shared by [HubAppBar] and any
-/// screen with its own `AppBar` that wants the same top-bar treatment (e.g.
-/// [ProfileScreen]).
+/// The Richfield banner image, sized to sit behind an `AppBar` via
+/// `flexibleSpace`. Shared by [HubAppBar] and any screen with its own
+/// `AppBar` that wants the same top-bar treatment (e.g. [ProfileScreen]).
+/// Title/icon legibility over the image comes from [hubBannerTitleShadow]
+/// rather than a scrim, so the banner's own colors read through unmodified.
 class HubBanner extends StatelessWidget {
   const HubBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset(
-          'assets/images/richfield-banner-logo.png',
-          fit: BoxFit.cover,
-          alignment: Alignment.centerLeft,
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Colors.black.withValues(alpha: 0.8),
-                Colors.black.withValues(alpha: 0.5),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/richfield-banner-logo.png',
+      fit: BoxFit.cover,
+      alignment: Alignment.centerLeft,
     );
   }
 }

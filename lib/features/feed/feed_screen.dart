@@ -19,7 +19,7 @@ class FeedScreen extends ConsumerWidget {
     return Scaffold(
       drawer: const HubDrawer(),
       appBar: HubAppBar(
-        title: 'RTC Hub',
+        title: 'EnRICHment',
         actions: [
           HubIconButton(
             onPressed: () => context.push('/events'),
