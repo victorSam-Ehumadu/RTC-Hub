@@ -75,6 +75,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         flexibleSpace: const HubBanner(),
         iconTheme: const IconThemeData(color: hubBannerForeground),
         actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+        // `leading` is deliberately left unset: this Scaffold has
+        // `drawer: const HubDrawer()` above, and Flutter only
+        // auto-generates the button that opens it (self view) or the real
+        // back arrow (someone else's pushed `/user/:id` view) when
+        // `leading` is null. Setting it explicitly would break whichever
+        // of those two this view needs.
         title: Text(
           isSelf ? 'Your Profile' : 'Profile',
           style: const TextStyle(

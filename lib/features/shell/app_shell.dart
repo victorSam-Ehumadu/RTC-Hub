@@ -505,6 +505,11 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
       iconTheme: onBanner == null ? null : IconThemeData(color: onBanner),
       actionsIconTheme:
           onBanner == null ? null : IconThemeData(color: onBanner),
+      // `leading` is deliberately left unset: every screen using this
+      // AppBar now has `drawer: const HubDrawer()`, and Flutter only
+      // auto-generates the hamburger button that opens it when `leading`
+      // is null. A logo here would silently replace that button and make
+      // the settings drawer unreachable.
       title: Text(
         title,
         style: onBanner == null
