@@ -154,7 +154,12 @@ ThemeData _build({required bool dark}) {
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: AppColors.button,
-        selectedForegroundColor: onPrimary,
+        // AppColors.button is the same dark navy in both themes, unlike
+        // the scheme's other colors — using `onPrimary` (black in light
+        // mode) put black text on that navy background, which is what
+        // made the selected Following/Discover segment unreadable in
+        // light mode. White is right for both themes here.
+        selectedForegroundColor: Colors.white,
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -175,7 +180,10 @@ ThemeData _build({required bool dark}) {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.white,
+      // Was hardcoded to Colors.white for both modes — back to the
+      // theme-adaptive surface color so dark mode gets the same navy-dark
+      // tone as everything else (cards, inputs), not a plain white bar.
+      backgroundColor: surface,
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       // Flutter's own default for the selected icon/label is

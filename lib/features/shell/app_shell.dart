@@ -447,27 +447,10 @@ class HubBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset(
-          'assets/images/richfield-banner-logo.png',
-          fit: BoxFit.cover,
-          alignment: Alignment.centerLeft,
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Colors.black.withValues(alpha: 0.8),
-                Colors.black.withValues(alpha: 0.5),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/richfield-banner-logo.png',
+      fit: BoxFit.cover,
+      alignment: Alignment.centerLeft,
     );
   }
 }
