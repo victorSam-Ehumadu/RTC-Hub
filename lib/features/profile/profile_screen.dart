@@ -45,6 +45,231 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ref.read(themeModeProvider.notifier).state = newMode;
   }
 
+  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    final shouldChange = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Change Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Current Password',
+                hintText: 'Enter your current password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                hintText: 'Enter a new password (min 8 characters)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirm New Password',
+                hintText: 'Confirm your new password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Change'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldChange != true) {
+      currentPasswordController.dispose();
+      newPasswordController.dispose();
+      confirmPasswordController.dispose();
+      return;
+    }
+
+    final currentPassword = currentPasswordController.text;
+    final newPassword = newPasswordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
+
+    if (newPassword.length < 8) {
+      if (context.mounted) {
+        showError(context, 'New password must be at least 8 characters');
+      }
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      if (context.mounted) {
+        showError(context, 'Passwords do not match');
+      }
+      return;
+    }
+
+    try {
+      await ref.read(authRepoProvider).changePassword(
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+          );
+      if (!context.mounted) return;
+      showMessage(context, 'Password changed successfully. Please sign in again.');
+      await Future.delayed(const Duration(seconds: 2));
+      if (!context.mounted) return;
+      await ref.read(authRepoProvider).signOut();
+      if (context.mounted) {
+        context.go('/login');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        showError(context, error);
+      }
+    }
+  }
+
+  Future<void> _showDeleteAccountDialog(BuildContext context, WidgetRef ref) async {
+    // Store context reference before async operations
+    final savedContext = context;
+
+    // First confirmation dialog
+    final confirmDelete = await showDialog<bool>(
+      context: savedContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure? This action cannot be undone.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Deleting your account will permanently remove:',
+              style: TextStyle(fontSize: 13),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '• Your profile and all personal data\n• All your posts and comments\n• Your connections and messages\n• Your skills and recommendations',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete My Account'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmDelete != true) return;
+    if (!savedContext.mounted) return;
+
+    // Password verification dialog
+    final passwordController = TextEditingController();
+    final shouldDelete = await showDialog<bool>(
+      context: savedContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm with Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Please enter your password to confirm account deletion:',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                hintText: 'Enter your password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) {
+      passwordController.dispose();
+      return;
+    }
+
+    final password = passwordController.text;
+    passwordController.dispose();
+
+    if (password.isEmpty) {
+      if (savedContext.mounted) {
+        showError(savedContext, 'Please enter your password');
+      }
+      return;
+    }
+
+    try {
+      await ref.read(authRepoProvider).deleteAccount(password: password);
+      if (!savedContext.mounted) return;
+      showMessage(savedContext, 'Account deleted successfully.');
+      await Future.delayed(const Duration(seconds: 1));
+      if (savedContext.mounted) {
+        savedContext.go('/login');
+      }
+    } catch (error) {
+      if (savedContext.mounted) {
+        showError(savedContext, error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(meProvider);
@@ -113,13 +338,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onPressed: () => context.push('/edit-profile'),
               icon: const Icon(Icons.edit_outlined),
             ),
-            IconButton(
-              tooltip: 'Sign out - Log out of your account',
-              onPressed: () async {
-                await ref.read(authRepoProvider).signOut();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              itemBuilder: (context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_outline, size: 20),
+                      SizedBox(width: 12),
+                      Text('Change password'),
+                    ],
+                  ),
+                  onTap: () => _showChangePasswordDialog(context, ref),
+                ),
+                PopupMenuItem<String>(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 20),
+                      SizedBox(width: 12),
+                      Text('Delete account'),
+                    ],
+                  ),
+                  onTap: () => _showDeleteAccountDialog(context, ref),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 12),
+                      Text('Sign out'),
+                    ],
+                  ),
+                  onTap: () async {
+                    await ref.read(authRepoProvider).signOut();
+                    if (context.mounted) context.go('/login');
+                  },
+                ),
+              ],
             ),
           ],
         ],
