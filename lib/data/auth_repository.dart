@@ -33,6 +33,8 @@ class AuthRepository {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? studentNumber,
     String? companyName,
     String? industry,
@@ -58,6 +60,8 @@ class AuthRepository {
         'course': ?course,
         'academic_year': ?academicYear,
         if (graduationYear != null) 'graduation_year': '$graduationYear',
+        'campus': ?campus,
+        if (enrollmentYear != null) 'enrollment_year': '$enrollmentYear',
         'student_number': ?studentNumber,
         'company_name': ?companyName,
         'industry': ?industry,
@@ -69,6 +73,23 @@ class AuthRepository {
 
   Future<void> sendPasswordReset(String email) =>
       db.auth.resetPasswordForEmail(email.trim().toLowerCase());
+
+  /// Changes the signed-in user's own password. Unlike the admin-forced
+  /// reset (`admin_reset_password`, migration 0014), this needs no RPC —
+  /// Supabase's own `updateUser` already scopes a write to the caller, so
+  /// there's no privileged-write boundary to cross (CLAUDE.md's
+  /// SECURITY DEFINER rule is for writing data on someone else's behalf, or
+  /// a field a user could benefit from lying about; a user's own credential
+  /// is neither). The caller re-authenticates with the current password
+  /// first — see [signIn] — which doubles as verifying it's correct.
+  Future<void> updateOwnPassword(String newPassword) =>
+      db.auth.updateUser(UserAttributes(password: newPassword));
+
+  /// Deletes the signed-in user's own account. See migration 0019's
+  /// `delete_own_account()` — a SECURITY DEFINER function is required here
+  /// because deleting an `auth.users` row needs privileges the client's
+  /// anon-derived JWT never holds.
+  Future<void> deleteOwnAccount() => db.rpc('delete_own_account');
 
   /// The signed-in user's own profile row.
   ///

@@ -18,8 +18,14 @@ class SignupScreen extends ConsumerStatefulWidget {
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  // Free-text email, used for ALUMNI/BUSINESS. STUDENT instead uses
+  // _emailLocal + _emailDomain below — registration is domain-restricted
+  // per the hackathon guidelines, so a dropdown of the allowed domains
+  // replaces free entry rather than just validating it after the fact.
   final _email = TextEditingController();
+  final _emailLocal = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   final _fullName = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
@@ -27,15 +33,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _graduationYear = TextEditingController();
 
   String _role = 'STUDENT';
+  String _emailDomain = kStudentEmailDomains.first;
   String? _faculty;
   String? _course;
   String? _year;
+  String? _campus;
+  int? _enrollmentYear;
   bool _busy = false;
 
   @override
   void dispose() {
     _email.dispose();
+    _emailLocal.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     _fullName.dispose();
     _company.dispose();
     _industry.dispose();
@@ -49,15 +60,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
+    final email = _role == 'STUDENT'
+        ? '${_emailLocal.text.trim()}@$_emailDomain'
+        : _email.text;
     try {
       await ref.read(authRepoProvider).signUp(
-            email: _email.text,
+            email: email,
             password: _password.text,
             fullName: _fullName.text,
             role: _role,
             faculty: _isStudentish ? _faculty : null,
             course: _isStudentish ? _course : null,
             academicYear: _isStudentish ? _year : null,
+            campus: _isStudentish ? _campus : null,
+            enrollmentYear: _isStudentish ? _enrollmentYear : null,
             graduationYear:
                 _role == 'ALUMNI' ? int.tryParse(_graduationYear.text.trim()) : null,
             studentNumber:
@@ -103,6 +119,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       _faculty = null;
                       _course = null;
                       _year = _role == 'ALUMNI' ? 'Alumni' : null;
+                      _campus = null;
+                      _enrollmentYear = null;
                     }),
                   ),
                   if (_role != 'STUDENT')
@@ -125,36 +143,83 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         : null,
                   ),
                   const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: _role == 'STUDENT'
-                          ? '202512345@my.richfield.ac.za'
-                          : 'you@company.co.za',
-                      helperText: _role == 'STUDENT'
-                          ? 'Richfield or AAA address, 9-digit student number'
-                          : null,
-                      helperMaxLines: 2,
+                  if (_role == 'STUDENT')
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: TextFormField(
+                            controller: _emailLocal,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Student number',
+                              hintText: '202512345',
+                            ),
+                            validator: (v) =>
+                                RegExp(r'^\d{9}$').hasMatch(v?.trim() ?? '')
+                                    ? null
+                                    : '9 digits',
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16, left: 4, right: 4),
+                          child: Text('@', style: TextStyle(fontSize: 16)),
+                        ),
+                        Expanded(
+                          flex: 6,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _emailDomain,
+                            isExpanded: true,
+                            decoration:
+                                const InputDecoration(labelText: 'Domain'),
+                            items: [
+                              for (final d in kStudentEmailDomains)
+                                DropdownMenuItem(
+                                  value: d,
+                                  child:
+                                      Text(d, overflow: TextOverflow.ellipsis),
+                                ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _emailDomain = v!),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration:
+                          const InputDecoration(labelText: 'Email', hintText: 'you@company.co.za'),
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        return value.contains('@')
+                            ? null
+                            : 'Enter your email address';
+                      },
                     ),
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (!value.contains('@')) return 'Enter your email address';
-                      if (_role == 'STUDENT' && !isValidStudentEmail(value)) {
-                        return 'Must be a Richfield or AAA student address '
-                            'with a 9-digit prefix';
-                      }
-                      return null;
-                    },
-                  ),
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _password,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    validator: (v) => (v == null || v.length < 8)
-                        ? 'Use at least 8 characters'
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      helperText: '8+ characters, upper and lower case, a '
+                          'number and a special character',
+                      helperMaxLines: 2,
+                    ),
+                    validator: (v) => passwordPolicyError(v ?? ''),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirmPassword,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(labelText: 'Confirm password'),
+                    validator: (v) => v != _password.text
+                        ? 'Passwords don\'t match'
                         : null,
                   ),
 
@@ -201,6 +266,32 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       onChanged: (v) => setState(() => _year = v),
                       validator: (v) => v == null ? 'Pick your year' : null,
                     ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      initialValue: _campus,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Campus'),
+                      items: [
+                        for (final c in kCampuses)
+                          DropdownMenuItem(value: c, child: Text(c)),
+                      ],
+                      onChanged: (v) => setState(() => _campus = v),
+                      validator: (v) => v == null ? 'Pick your campus' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<int>(
+                      initialValue: _enrollmentYear,
+                      isExpanded: true,
+                      decoration:
+                          const InputDecoration(labelText: 'Year of enrollment'),
+                      items: [
+                        for (final y in kYearOptions(after: 0))
+                          DropdownMenuItem(value: y, child: Text('$y')),
+                      ],
+                      onChanged: (v) => setState(() => _enrollmentYear = v),
+                      validator: (v) =>
+                          v == null ? 'Pick your enrollment year' : null,
+                    ),
                   ],
 
                   if (_role == 'ALUMNI') ...[
@@ -208,11 +299,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     _Notice(
                       icon: Icons.info_outline,
                       text: "If these match an account you held as a "
-                          "student here, you're approved automatically. "
-                          "Otherwise, you can optionally upload a document "
-                          "afterwards — a degree certificate, graduation "
-                          "letter, or old student card — to help an admin "
-                          "review you faster.",
+                          "student here, an admin reviewing your signup will "
+                          "see that and can approve you faster. You can also "
+                          "optionally upload a document afterwards — a "
+                          "degree certificate, graduation letter, or old "
+                          "student card — either way, either helps.",
                     ),
                     const SizedBox(height: 14),
                     TextFormField(

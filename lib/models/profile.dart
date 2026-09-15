@@ -18,6 +18,8 @@ class Profile {
     this.course,
     this.academicYear,
     this.graduationYear,
+    this.campus,
+    this.enrollmentYear,
     this.companyName,
     this.industry,
     this.companyLocation,
@@ -46,6 +48,8 @@ class Profile {
   final String? course;
   final String? academicYear;
   final int? graduationYear;
+  final String? campus;
+  final int? enrollmentYear;
   final String? companyName;
   final String? industry;
   final String? companyLocation;
@@ -105,6 +109,8 @@ class Profile {
         course: map['course'] as String?,
         academicYear: map['academic_year'] as String?,
         graduationYear: map['graduation_year'] as int?,
+        campus: map['campus'] as String?,
+        enrollmentYear: map['enrollment_year'] as int?,
         companyName: map['company_name'] as String?,
         industry: map['industry'] as String?,
         companyLocation: map['company_location'] as String?,
@@ -130,6 +136,8 @@ class Profile {
         'course': course,
         'academic_year': academicYear,
         'graduation_year': graduationYear,
+        'campus': campus,
+        'enrollment_year': enrollmentYear,
         'company_name': companyName,
         'industry': industry,
         'company_location': companyLocation,
@@ -152,6 +160,8 @@ class Profile {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? companyName,
     String? industry,
     String? companyLocation,
@@ -178,6 +188,8 @@ class Profile {
         course: course ?? this.course,
         academicYear: academicYear ?? this.academicYear,
         graduationYear: graduationYear ?? this.graduationYear,
+        campus: campus ?? this.campus,
+        enrollmentYear: enrollmentYear ?? this.enrollmentYear,
         companyName: companyName ?? this.companyName,
         industry: industry ?? this.industry,
         companyLocation: companyLocation ?? this.companyLocation,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 import 'post_card.dart';
 
 class FeedScreen extends ConsumerWidget {
@@ -16,6 +17,7 @@ class FeedScreen extends ConsumerWidget {
     final feed = ref.watch(feedProvider);
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: HubAppBar(
         title: 'RTC Hub',
         actions: [

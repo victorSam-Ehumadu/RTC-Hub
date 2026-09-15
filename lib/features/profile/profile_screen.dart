@@ -11,6 +11,7 @@ import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../feed/post_card.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 
 /// Someone's profile — theirs or your own.
 ///
@@ -42,12 +43,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _toggleTheme() {
     final currentMode = ref.read(themeModeProvider);
     final newMode = currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    ref.read(themeModeProvider.notifier).state = newMode;
+    ref.read(themeModeProvider.notifier).set(newMode);
   }
 
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(meProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final isSelf = widget.userId == null || widget.userId == me?.id;
     final targetId = widget.userId ?? me?.id;
 
@@ -66,6 +68,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         isSelf ? false : ref.watch(connectionWithProvider(targetId)).valueOrNull?.isAccepted ?? false;
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -104,7 +107,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             IconButton(
               tooltip: 'Toggle light/dark mode',
               onPressed: _toggleTheme,
-              icon: MediaQuery.of(context).platformBrightness == Brightness.dark
+              icon: themeMode == ThemeMode.dark
                   ? const Icon(Icons.light_mode)
                   : const Icon(Icons.dark_mode),
             ),
@@ -430,24 +433,12 @@ class _ConnectRow extends ConsumerWidget {
               ),
               error: (_, _) => const SizedBox.shrink(),
               data: (c) {
-                if (c == null) {
-                  return FilledButton.icon(
-                    onPressed: () async {
-                      try {
-                        await ref
-                            .read(connectionRepoProvider)
-                            .request(profile.id);
-                        ref.invalidate(connectionWithProvider(profile.id));
-                        if (context.mounted) {
-                          showMessage(context, 'Request sent.');
-                        }
-                      } catch (error) {
-                        if (context.mounted) showError(context, error);
-                      }
-                    },
-                    icon: const Icon(Icons.person_add_alt, size: 18),
-                    label: const Text('Connect'),
-                  );
+                // null (never interacted) and DECLINED (denied, but the
+                // sender may try again — see migration 0015) both render the
+                // same actionable "Connect" button. Only genuine PENDING is
+                // a dead end for the sender.
+                if (c == null || c.isDeclined) {
+                  return _ConnectButton(profile: profile);
                 }
                 if (c.isAccepted) {
                   return const OutlinedButton(
@@ -472,6 +463,31 @@ class _ConnectRow extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The "Connect" button, shared by the never-interacted and declined-request
+/// states — a decline can be resent (see migration 0015 / [ConnectionRepository.request]).
+class _ConnectButton extends ConsumerWidget {
+  const _ConnectButton({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FilledButton.icon(
+      onPressed: () async {
+        try {
+          await ref.read(connectionRepoProvider).request(profile.id);
+          ref.invalidate(connectionWithProvider(profile.id));
+          if (context.mounted) showMessage(context, 'Request sent.');
+        } catch (error) {
+          if (context.mounted) showError(context, error);
+        }
+      },
+      icon: const Icon(Icons.person_add_alt, size: 18),
+      label: const Text('Connect'),
     );
   }
 }
@@ -703,42 +719,10 @@ class _SkillsSection extends ConsumerWidget {
   }
 
   Future<void> _addSkill(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-
-    // Popping the dialog synchronously from a callback on the autofocused
-    // TextField (Enter key, or a button tapped while it still has focus)
-    // races the field's own focus/keyboard teardown and can trip Flutter's
-    // '_dependents.isEmpty' assertion. Deferring to the next frame lets that
-    // teardown finish before the dialog route is torn down.
-    void close(BuildContext dialogContext, [String? value]) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (dialogContext.mounted) Navigator.pop(dialogContext, value);
-      });
-    }
-
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add a skill'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
-          onSubmitted: (v) => close(dialogContext, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => close(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => close(dialogContext, controller.text),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) => const _AddSkillDialog(),
     );
-    controller.dispose();
 
     if (name == null || name.trim().isEmpty) return;
     try {
@@ -748,6 +732,71 @@ class _SkillsSection extends ConsumerWidget {
     } catch (error) {
       if (context.mounted) showError(context, error);
     }
+  }
+}
+
+/// The "add a skill" dialog's content, as its own [StatefulWidget].
+///
+/// This used to be an inline [TextField] with `autofocus: true` built
+/// straight into the [showDialog] call. `autofocus` schedules its own
+/// focus request for a later frame internally, and a fast Cancel — one
+/// that dismisses the dialog before that scheduled request lands, which is
+/// exactly what tapping Cancel before typing anything does — could tear
+/// down the field's element while it was still mid-registration as an
+/// `InheritedWidget` dependent, tripping Flutter's `'_dependents.isEmpty'`
+/// assertion. Owning the [FocusNode] here and requesting focus explicitly,
+/// after the first frame and guarded by [mounted], avoids that race, and
+/// ties both the node's and the controller's lifecycle to this widget's own
+/// rather than to `TextField`'s internal bookkeeping.
+class _AddSkillDialog extends StatefulWidget {
+  const _AddSkillDialog();
+
+  @override
+  State<_AddSkillDialog> createState() => _AddSkillDialogState();
+}
+
+class _AddSkillDialogState extends State<_AddSkillDialog> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _close([String? value]) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.pop(context, value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add a skill'),
+      content: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        decoration: const InputDecoration(hintText: 'e.g. PostgreSQL'),
+        onSubmitted: (v) => _close(v),
+      ),
+      actions: [
+        TextButton(onPressed: () => _close(), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => _close(_controller.text),
+          child: const Text('Add'),
+        ),
+      ],
+    );
   }
 }
 
