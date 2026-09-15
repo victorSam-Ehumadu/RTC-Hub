@@ -41,12 +41,14 @@ class RtcHubApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
-      title: 'RTC Hub',
+      title: 'Richfield Community',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ref.watch(themeModeProvider),
+      themeMode: themeMode,
       routerConfig: ref.watch(routerProvider),
     );
   }
@@ -59,7 +61,7 @@ class _SetupNeededApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RTC Hub',
+      title: 'Richfield Community',
       debugShowCheckedModeBanner: false,
       theme: buildDarkTheme(),
       home: Scaffold(
@@ -70,15 +72,17 @@ class _SetupNeededApp extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.settings_ethernet,
-                    size: 48, color: AppColors.accent),
+                const Icon(
+                  Icons.settings_ethernet,
+                  size: 48,
+                  color: AppColors.accent,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   'Supabase is not configured',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(

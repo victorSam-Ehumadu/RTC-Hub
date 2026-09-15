@@ -1,8 +1,12 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../models/profile.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../onboarding/tutorial_screen.dart';
@@ -45,7 +49,7 @@ class AppShell extends ConsumerWidget {
             ),
           );
         }
-        if (!me.isActive) return AccountGateScreen(status: me.status);
+        if (!me.isActive) return AccountGateScreen(profile: me);
 
         // Stream A: first-run tutorial gate. Same pattern as the account
         // check above — this needs an async read (`onboarding_progress`),
@@ -195,18 +199,24 @@ class _NavBar extends ConsumerWidget {
 
 /// Shown to accounts that are not ACTIVE, in place of the whole app.
 class AccountGateScreen extends ConsumerWidget {
-  const AccountGateScreen({super.key, required this.status});
+  const AccountGateScreen({super.key, required this.profile});
 
-  final String status;
+  final Profile profile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final status = profile.status;
     final pending = status == 'PENDING';
+    // Stream D: alumni are PENDING like a business, but nothing checks them
+    // against anything — there's no institutional email to trust the way a
+    // student's is trusted. This is the human-reviewed document step; see
+    // docs/alumni-verification-design.md for why.
+    final needsAlumniDoc = pending && profile.isAlumni;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -227,12 +237,18 @@ class AccountGateScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  pending
+                  needsAlumniDoc
                       ? 'A Richfield administrator is reviewing your '
-                          'registration. You will get a notification the moment '
-                          'it is approved.'
-                      : 'Your access has been withdrawn. Contact a Richfield '
-                          'administrator if you think this is a mistake.',
+                          'account. Uploading a document proving your '
+                          'studies is optional, but helps them decide '
+                          'faster.'
+                      : pending
+                          ? 'A Richfield administrator is reviewing your '
+                              'registration. You will get a notification the '
+                              'moment it is approved.'
+                          : 'Your access has been withdrawn. Contact a '
+                              'Richfield administrator if you think this is a '
+                              'mistake.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     height: 1.5,
@@ -242,6 +258,10 @@ class AccountGateScreen extends ConsumerWidget {
                         .withValues(alpha: 0.7),
                   ),
                 ),
+                if (needsAlumniDoc) ...[
+                  const SizedBox(height: 22),
+                  _AlumniVerificationUpload(profile: profile),
+                ],
                 const SizedBox(height: 28),
                 OutlinedButton.icon(
                   onPressed: () => ref.invalidate(myProfileProvider),
@@ -265,6 +285,95 @@ class AccountGateScreen extends ConsumerWidget {
   }
 }
 
+/// Stream D: lets a PENDING alumnus upload the document an admin judges
+/// their claimed student number and graduation year against. Uploading here
+/// (rather than as a second step during signup) is deliberate — the router
+/// redirects away from `/signup` the instant a session exists, so there is
+/// no window to run a second step on that screen, and this also lets the
+/// alumnus retry if their first upload was the wrong file.
+class _AlumniVerificationUpload extends ConsumerStatefulWidget {
+  const _AlumniVerificationUpload({required this.profile});
+
+  final Profile profile;
+
+  @override
+  ConsumerState<_AlumniVerificationUpload> createState() =>
+      _AlumniVerificationUploadState();
+}
+
+class _AlumniVerificationUploadState
+    extends ConsumerState<_AlumniVerificationUpload> {
+  bool _busy = false;
+  Object? _error;
+
+  Future<void> _pickAndUpload() async {
+    setState(() => _error = null);
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    final path = result?.files.singleOrNull?.path;
+    if (path == null) return;
+
+    setState(() => _busy = true);
+    try {
+      final url =
+          await ref.read(storageRepoProvider).uploadVerification(File(path));
+      await ref
+          .read(profileRepoProvider)
+          .update(widget.profile.copyWith(verificationPhotoUrl: url));
+      ref.invalidate(myProfileProvider);
+      if (mounted) {
+        showMessage(context, 'Document submitted for review.');
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final submitted = (widget.profile.verificationPhotoUrl ?? '').isNotEmpty;
+
+    return Column(
+      children: [
+        if (submitted)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle_outline,
+                  size: 18, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                'Document submitted',
+                style: TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          ErrorView(error: _error!),
+        ],
+        const SizedBox(height: 12),
+        _busy
+            ? const CircularProgressIndicator()
+            : OutlinedButton.icon(
+                onPressed: _pickAndUpload,
+                icon: const Icon(Icons.upload_file, size: 18),
+                label:
+                    Text(submitted ? 'Replace document' : 'Upload document'),
+              ),
+      ],
+    );
+  }
+}
+
 /// White foreground used for text/icons that sit on top of [HubBanner] —
 /// plain white reads on both the blue field and the red photo half of the
 /// banner, regardless of the app's light/dark theme.
@@ -273,6 +382,61 @@ const hubBannerForeground = Colors.white;
 /// Shadow that keeps [hubBannerForeground] text legible over the banner's
 /// busier (photo) half.
 const hubBannerTitleShadow = [Shadow(color: Colors.black87, blurRadius: 8)];
+
+/// IconButton wrapper that provides visible hover/press feedback on banner backgrounds.
+/// Uses a semi-transparent circular background on hover and a more opaque one on press.
+class HubIconButton extends StatefulWidget {
+  const HubIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  final Widget icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  @override
+  State<HubIconButton> createState() => _HubIconButtonState();
+}
+
+class _HubIconButtonState extends State<HubIconButton> {
+  bool _isHovering = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _isPressed
+                ? Colors.white.withValues(alpha: 0.25)
+                : _isHovering
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.transparent,
+          ),
+          child: IconButton(
+            icon: widget.icon,
+            onPressed: widget.onPressed,
+            tooltip: widget.tooltip,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            splashRadius: 24,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// The Richfield banner image with a left-to-right dark scrim, sized to sit
 /// behind an `AppBar` via `flexibleSpace`. Shared by [HubAppBar] and any
@@ -353,7 +517,19 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       actions: [
         ...?actions,
-        IconButton(
+        // Stream A addition (§2.6: the assistant is "an ongoing chatbot the
+        // user can return to") — shared here rather than per-screen so
+        // every tab that uses HubAppBar gets it for free. Flag to whoever
+        // owns this file if it collides.
+        HubIconButton(
+          tooltip: 'AI Assistant',
+          onPressed: () => context.push('/assistant'),
+          icon: Icon(Icons.smart_toy_outlined, color: onBanner),
+        ),
+        HubIconButton(
+          tooltip: unread > 0
+              ? 'Notifications ($unread unread)'
+              : 'Notifications',
           onPressed: () => context.push('/notifications'),
           icon: Stack(
             clipBehavior: Clip.none,

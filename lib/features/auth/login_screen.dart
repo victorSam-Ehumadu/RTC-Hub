@@ -162,7 +162,7 @@ class _Wordmark extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'RTC Hub',
+          'Richfield Community',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
@@ -170,7 +170,7 @@ class _Wordmark extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Proof of work, not a digital résumé.',
+          'Proof, not paper.',
           textAlign: TextAlign.center,
           style: monoStyle(
             size: 12,

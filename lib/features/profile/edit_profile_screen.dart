@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
@@ -21,10 +22,13 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _fullName = TextEditingController();
   final _bio = TextEditingController();
+  final _studentInvolvement = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
   final _location = TextEditingController();
   final _portfolio = TextEditingController();
+  final _linkedinUrl = TextEditingController();
+  final _credlyUrl = TextEditingController();
 
   String? _faculty;
   String? _course;
@@ -44,10 +48,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     _fullName.dispose();
     _bio.dispose();
+    _studentInvolvement.dispose();
     _company.dispose();
     _industry.dispose();
     _location.dispose();
     _portfolio.dispose();
+    _linkedinUrl.dispose();
+    _credlyUrl.dispose();
     super.dispose();
   }
 
@@ -58,12 +65,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       imageQuality: 85,
     );
     if (picked == null) return;
+    if (!mounted) return;
+
+    // Crop the image to a square
+    final primary = Theme.of(context).colorScheme.primary;
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Profile Picture',
+          toolbarColor: primary,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Crop Profile Picture',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+
+    if (cropped == null) return;
+    if (!mounted) return;
 
     setState(() => _uploading = true);
     try {
       final url = await ref
           .read(storageRepoProvider)
-          .upload(File(picked.path), bucket: StorageRepository.avatars);
+          .upload(File(cropped.path), bucket: StorageRepository.avatars);
       setState(() => _avatarUrl = url);
     } catch (error) {
       if (mounted) showError(context, error);
@@ -82,6 +114,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             me.copyWith(
               fullName: _fullName.text.trim(),
               bio: _bio.text.trim(),
+              studentInvolvement: _studentInvolvement.text.trim(),
               avatarUrl: _avatarUrl,
               faculty: _faculty,
               course: _course,
@@ -94,6 +127,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               companyLocation: _location.text.trim(),
               portfolioUrl:
                   _portfolio.text.trim().isEmpty ? null : _portfolio.text.trim(),
+              linkedinUrl: _linkedinUrl.text.trim().isEmpty ? null : _linkedinUrl.text.trim(),
+              credlyUrl: _credlyUrl.text.trim().isEmpty ? null : _credlyUrl.text.trim(),
               visibilityBusiness: _visibleToBusiness,
               visibilityPeers: _visibleToPeers,
             ),
@@ -118,10 +153,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _loaded = true;
       _fullName.text = me.fullName;
       _bio.text = me.bio ?? '';
+      // TODO: Pre-fill with AI assistant during onboarding flow (§2.6)
+      _studentInvolvement.text = me.studentInvolvement ?? '';
       _company.text = me.companyName ?? '';
       _industry.text = me.industry ?? '';
       _location.text = me.companyLocation ?? '';
       _portfolio.text = me.portfolioUrl ?? '';
+      _linkedinUrl.text = me.linkedinUrl ?? '';
+      _credlyUrl.text = me.credlyUrl ?? '';
       // Guard against stored values that no longer exist in kFaculties /
       // kAcademicYears (e.g. data from before a constants.dart edit, or a
       // profile written outside the app) — DropdownButtonFormField asserts
@@ -210,11 +249,43 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
           const SizedBox(height: 14),
           TextField(
+            controller: _studentInvolvement,
+            maxLines: 3,
+            minLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Involvement',
+              hintText: 'Club activities, volunteer work, competitions, community involvement.',
+            ),
+          ),
+          const SizedBox(height: 14),
+          const SectionHeader(title: 'Portfolio & Links'),
+          TextField(
             controller: _portfolio,
             keyboardType: TextInputType.url,
             decoration: const InputDecoration(
               labelText: 'Portfolio / GitHub URL',
               prefixIcon: Icon(Icons.link, size: 20),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _linkedinUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'LinkedIn Profile',
+              prefixIcon: Icon(Icons.work_outline, size: 20),
+              hintText: 'https://linkedin.com/in/yourprofile',
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _credlyUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Credly Badge Collection',
+              prefixIcon: Icon(Icons.verified_user_outlined, size: 20),
+              hintText: 'https://www.credly.com/users/yourprofile',
             ),
           ),
 

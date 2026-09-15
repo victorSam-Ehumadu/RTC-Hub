@@ -29,6 +29,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _fullName = TextEditingController();
   final _company = TextEditingController();
   final _industry = TextEditingController();
+  final _studentNumber = TextEditingController();
+  final _graduationYear = TextEditingController();
 
   String _role = 'STUDENT';
   String _emailDomain = kStudentEmailDomains.first;
@@ -48,6 +50,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _fullName.dispose();
     _company.dispose();
     _industry.dispose();
+    _studentNumber.dispose();
+    _graduationYear.dispose();
     super.dispose();
   }
 
@@ -70,21 +74,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             academicYear: _isStudentish ? _year : null,
             campus: _isStudentish ? _campus : null,
             enrollmentYear: _isStudentish ? _enrollmentYear : null,
+            graduationYear:
+                _role == 'ALUMNI' ? int.tryParse(_graduationYear.text.trim()) : null,
+            studentNumber:
+                _role == 'ALUMNI' ? _studentNumber.text.trim() : null,
             companyName: _role == 'BUSINESS' ? _company.text : null,
             industry: _role == 'BUSINESS' ? _industry.text : null,
           );
       if (!mounted) return;
 
-      if (_role == 'STUDENT') {
-        // Students are ACTIVE immediately, and signUp already left us with a
-        // session, so the router will move to the feed on its own.
-        showMessage(context, 'Welcome to RTC Hub.');
-      } else {
-        showMessage(
-          context,
-          'Registration submitted. An administrator will review your account.',
-        );
-      }
+      // Show post-signup loading screen for all roles before routing to feed/profile
+      context.go('/post-signup-loading');
     } catch (error) {
       if (mounted) showError(context, error);
     } finally {
@@ -291,6 +291,48 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       onChanged: (v) => setState(() => _enrollmentYear = v),
                       validator: (v) =>
                           v == null ? 'Pick your enrollment year' : null,
+                    ),
+                  ],
+
+                  if (_role == 'ALUMNI') ...[
+                    const SectionHeader(title: 'Verify your studies'),
+                    _Notice(
+                      icon: Icons.info_outline,
+                      text: "If these match an account you held as a "
+                          "student here, an admin reviewing your signup will "
+                          "see that and can approve you faster. You can also "
+                          "optionally upload a document afterwards — a "
+                          "degree certificate, graduation letter, or old "
+                          "student card — either way, either helps.",
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _studentNumber,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Student number',
+                        hintText: 'The number you studied under',
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your student number'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _graduationYear,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Graduation year',
+                        hintText: 'e.g. 2023',
+                      ),
+                      validator: (v) {
+                        final year = int.tryParse(v?.trim() ?? '');
+                        final thisYear = DateTime.now().year;
+                        if (year == null || year < 1950 || year > thisYear) {
+                          return 'Enter a valid graduation year';
+                        }
+                        return null;
+                      },
                     ),
                   ],
 

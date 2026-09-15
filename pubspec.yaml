@@ -47,6 +47,8 @@ dependencies:
   path: ^1.9.1
   http: ^1.2.0
   file_picker: ^8.0.0
+  url_launcher: ^6.2.0
+  image_cropper: ^12.2.1
 
 dev_dependencies:
   flutter_test:
@@ -103,3 +105,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+

@@ -53,6 +53,8 @@ build/
 
 # Local Supabase credentials passed via --dart-define-from-file
 env.json
+env.*.json
+!env.example.json
 
 # Android
 **/android/**/gradle-wrapper.jar
@@ -67,3 +69,5 @@ env.json
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Pods/
 **/ios/.symlinks/
+
+local.properties

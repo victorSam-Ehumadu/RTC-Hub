@@ -761,6 +761,7 @@ class DemoAuthRepository extends AuthRepository {
     int? graduationYear,
     String? campus,
     int? enrollmentYear,
+    String? studentNumber,
     String? companyName,
     String? industry,
   }) async {}
@@ -815,6 +816,7 @@ class DemoPostRepository extends PostRepository {
     String? thumbnailUrl,
     bool isBounty = false,
     String? bountyModule,
+    List<String>? attachmentUrls,
   }) async {
     final post = Post(
       id: 'p-${DateTime.now().millisecondsSinceEpoch}',
@@ -831,6 +833,7 @@ class DemoPostRepository extends PostRepository {
       // 10 is what trg_posts_guard would set.
       bountyPoints: isBounty ? 10 : 0,
       bountyModule: bountyModule,
+      attachmentUrls: attachmentUrls ?? [],
     );
     demoPosts.insert(0, post);
     _ping();

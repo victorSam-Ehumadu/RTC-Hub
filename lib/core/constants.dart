@@ -84,12 +84,10 @@ const kCodeLanguages = <String>[
 
 const kReactionEmojis = <String>['👍', '🔥', '🧠', '🎯', '👏'];
 
-/// The domains a student may register on, per the hackathon guidelines
-/// (§2.1): Richfield's own domains plus the AAA partner-campus domains. This
-/// is the single source of truth for both the signup email dropdown and
-/// [isValidStudentEmail] below — the same four domains must also be enforced
-/// server-side in `handle_new_user()`, since this client copy is only a
-/// convenience, not the actual boundary (see CLAUDE.md's security model).
+/// Domains accepted for student/alumni registration: Richfield's own, plus
+/// the AAA partner-campus domains. Kept as a list so a further domain is a
+/// one-line addition here and in `handle_new_user()`. Also the single
+/// source of truth for the signup email domain dropdown.
 const kStudentEmailDomains = <String>[
   'my.richfield.ac.za',
   'richfield.ac.za',
@@ -98,11 +96,12 @@ const kStudentEmailDomains = <String>[
 ];
 
 /// Student emails must sit on one of [kStudentEmailDomains] with a 9-digit
-/// prefix. The same rule is enforced in `handle_new_user()`; this copy
-/// exists so the user gets a useful message before the network round-trip.
+/// prefix. The same rule is enforced in `handle_new_user()`; this copy exists
+/// so the user gets a useful message before the network round-trip.
 bool isValidStudentEmail(String email) {
   final clean = email.trim().toLowerCase();
-  final onDomain = kStudentEmailDomains.any((d) => clean.endsWith('@$d'));
+  final onDomain =
+      kStudentEmailDomains.any((domain) => clean.endsWith('@$domain'));
   if (!onDomain) return false;
   final prefix = clean.split('@').first;
   return RegExp(r'^\d{9}$').hasMatch(prefix);

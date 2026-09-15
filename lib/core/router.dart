@@ -7,6 +7,7 @@ import '../features/analytics/business_dashboard_screen.dart';
 import '../features/analytics/student_dashboard_screen.dart';
 import '../features/assistant/assistant_screen.dart';
 import '../features/auth/login_screen.dart';
+import '../features/auth/post_signup_loading_screen.dart';
 import '../features/auth/signup_screen.dart';
 import '../features/bounty/bounty_screen.dart';
 import '../features/events/events_screen.dart';
@@ -60,6 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, _) => const SignupScreen()),
+      GoRoute(path: '/post-signup-loading', builder: (_, _) => const PostSignupLoadingScreen()),
 
       // Bottom-nav tabs. IndexedStack keeps each tab's scroll position and
       // loaded data when switching, which matters on the feed.

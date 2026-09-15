@@ -21,10 +21,10 @@ class FeedScreen extends ConsumerWidget {
       appBar: HubAppBar(
         title: 'RTC Hub',
         actions: [
-          IconButton(
+          HubIconButton(
             onPressed: () => context.push('/events'),
-            icon: const Icon(Icons.event_outlined),
-            tooltip: 'Events',
+            icon: Icon(Icons.event_outlined, color: hubBannerForeground),
+            tooltip: 'Events & Opportunities',
           ),
         ],
       ),

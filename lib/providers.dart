@@ -125,6 +125,16 @@ final experienceProvider = FutureProvider.autoDispose
   return ref.watch(profileRepoProvider).experience(userId);
 });
 
+final recommendationsProvider = FutureProvider.autoDispose
+    .family<List<Recommendation>, String>((ref, userId) {
+  return ref.watch(profileRepoProvider).recommendations(userId);
+});
+
+final pendingRecommendationsProvider =
+    FutureProvider.autoDispose<List<Recommendation>>((ref) {
+  return ref.watch(profileRepoProvider).pendingRecommendations();
+});
+
 final logicPointsProvider =
     FutureProvider.autoDispose.family<int, String>((ref, userId) {
   return ref.watch(profileRepoProvider).logicPoints(userId);

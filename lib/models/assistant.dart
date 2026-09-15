@@ -29,6 +29,35 @@ class ChatMessage {
       );
 }
 
+/// One work-experience entry Gemini found in a CV — not yet a
+/// `work_experience` row (no `id`/`userId` until [ProfileRepository.addExperience]
+/// actually writes it, which only happens once the user confirms it in the
+/// review step of `CvSkillsScreen`).
+class ExtractedExperience {
+  const ExtractedExperience({
+    required this.title,
+    required this.company,
+    this.startDate,
+    this.endDate,
+    this.description,
+  });
+
+  final String title;
+  final String company;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? description;
+}
+
+/// Everything `AiRepository.extractFromCv` found worth suggesting from a
+/// single CV upload (§2.8: "extract skills and qualifications").
+class CvExtraction {
+  const CvExtraction({this.skills = const [], this.experience = const []});
+
+  final List<String> skills;
+  final List<ExtractedExperience> experience;
+}
+
 /// A row from `onboarding_progress` (present since migration 0001) — where a
 /// user is in the first-run profile walkthrough, and whether they have
 /// already seen the app tutorial.
