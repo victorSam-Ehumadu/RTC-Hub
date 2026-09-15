@@ -18,12 +18,16 @@ class Profile {
     this.course,
     this.academicYear,
     this.graduationYear,
+    this.campus,
+    this.enrollmentYear,
     this.companyName,
     this.industry,
     this.companyLocation,
     this.talentDescription,
     this.cvUrl,
     this.portfolioUrl,
+    this.linkedinUrl,
+    this.credlyUrl,
     this.verificationPhotoUrl,
     this.profileCompleteness = 0,
     this.visibilityBusiness = true,
@@ -44,12 +48,16 @@ class Profile {
   final String? course;
   final String? academicYear;
   final int? graduationYear;
+  final String? campus;
+  final int? enrollmentYear;
   final String? companyName;
   final String? industry;
   final String? companyLocation;
   final String? talentDescription;
   final String? cvUrl;
   final String? portfolioUrl;
+  final String? linkedinUrl;
+  final String? credlyUrl;
 
   /// A signed URL into the private `verification` storage bucket — the
   /// document an alumnus uploaded as evidence for Stream D's alumni
@@ -101,12 +109,16 @@ class Profile {
         course: map['course'] as String?,
         academicYear: map['academic_year'] as String?,
         graduationYear: map['graduation_year'] as int?,
+        campus: map['campus'] as String?,
+        enrollmentYear: map['enrollment_year'] as int?,
         companyName: map['company_name'] as String?,
         industry: map['industry'] as String?,
         companyLocation: map['company_location'] as String?,
         talentDescription: map['talent_description'] as String?,
         cvUrl: map['cv_url'] as String?,
         portfolioUrl: map['portfolio_url'] as String?,
+        linkedinUrl: map['linkedin_url'] as String?,
+        credlyUrl: map['credly_url'] as String?,
         verificationPhotoUrl: map['verification_photo_url'] as String?,
         profileCompleteness: (map['profile_completeness'] as int?) ?? 0,
         visibilityBusiness: (map['visibility_business'] as bool?) ?? true,
@@ -124,12 +136,16 @@ class Profile {
         'course': course,
         'academic_year': academicYear,
         'graduation_year': graduationYear,
+        'campus': campus,
+        'enrollment_year': enrollmentYear,
         'company_name': companyName,
         'industry': industry,
         'company_location': companyLocation,
         'talent_description': talentDescription,
         'cv_url': cvUrl,
         'portfolio_url': portfolioUrl,
+        'linkedin_url': linkedinUrl,
+        'credly_url': credlyUrl,
         'verification_photo_url': verificationPhotoUrl,
         'visibility_business': visibilityBusiness,
         'visibility_peers': visibilityPeers,
@@ -144,12 +160,16 @@ class Profile {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? companyName,
     String? industry,
     String? companyLocation,
     String? talentDescription,
     String? cvUrl,
     String? portfolioUrl,
+    String? linkedinUrl,
+    String? credlyUrl,
     String? verificationPhotoUrl,
     bool? visibilityBusiness,
     bool? visibilityPeers,
@@ -168,12 +188,16 @@ class Profile {
         course: course ?? this.course,
         academicYear: academicYear ?? this.academicYear,
         graduationYear: graduationYear ?? this.graduationYear,
+        campus: campus ?? this.campus,
+        enrollmentYear: enrollmentYear ?? this.enrollmentYear,
         companyName: companyName ?? this.companyName,
         industry: industry ?? this.industry,
         companyLocation: companyLocation ?? this.companyLocation,
         talentDescription: talentDescription ?? this.talentDescription,
         cvUrl: cvUrl ?? this.cvUrl,
         portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+        linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+        credlyUrl: credlyUrl ?? this.credlyUrl,
         verificationPhotoUrl: verificationPhotoUrl ?? this.verificationPhotoUrl,
         profileCompleteness: profileCompleteness,
         visibilityBusiness: visibilityBusiness ?? this.visibilityBusiness,
@@ -207,6 +231,81 @@ class Skill {
         verified: (map['verified'] as bool?) ?? false,
         moduleRef: map['module_ref'] as String?,
         endorsements: _embeddedCount(map['skill_endorsements']),
+      );
+}
+
+/// A skill endorsement row with endorser profile info.
+class SkillEndorsement {
+  const SkillEndorsement({
+    required this.id,
+    required this.skillId,
+    required this.endorserId,
+    required this.endorserName,
+    required this.endorserAvatarUrl,
+    this.note,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String skillId;
+  final String endorserId;
+  final String endorserName;
+  final String? endorserAvatarUrl;
+  final String? note;
+  final DateTime createdAt;
+
+  factory SkillEndorsement.fromMap(Map<String, dynamic> map) => SkillEndorsement(
+        id: map['id'] as String,
+        skillId: map['skill_id'] as String,
+        endorserId: map['endorser_id'] as String,
+        endorserName: (map['endorser'] != null && map['endorser'] is Map
+                ? (map['endorser'] as Map)['full_name']
+                : null) as String? ??
+            'Unknown',
+        endorserAvatarUrl: map['endorser'] != null && map['endorser'] is Map
+            ? (map['endorser'] as Map)['avatar_url'] as String?
+            : null,
+        note: map['note'] as String?,
+        createdAt: DateTime.parse((map['created_at'] ?? '') as String),
+      );
+}
+
+/// A recommendation row with author profile info.
+class Recommendation {
+  const Recommendation({
+    required this.id,
+    required this.authorId,
+    required this.authorName,
+    required this.authorAvatarUrl,
+    required this.body,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String? authorAvatarUrl;
+  final String body;
+  final String status; // PENDING, APPROVED, DECLINED
+  final DateTime createdAt;
+
+  bool get isPending => status == 'PENDING';
+  bool get isApproved => status == 'APPROVED';
+
+  factory Recommendation.fromMap(Map<String, dynamic> map) => Recommendation(
+        id: map['id'] as String,
+        authorId: map['author_id'] as String,
+        authorName: (map['author'] != null && map['author'] is Map
+                ? (map['author'] as Map)['full_name']
+                : null) as String? ??
+            'Unknown',
+        authorAvatarUrl: map['author'] != null && map['author'] is Map
+            ? (map['author'] as Map)['avatar_url'] as String?
+            : null,
+        body: (map['body'] ?? '') as String,
+        status: (map['status'] ?? 'PENDING') as String,
+        createdAt: DateTime.parse((map['created_at'] ?? '') as String),
       );
 }
 

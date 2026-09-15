@@ -23,6 +23,7 @@ class Connection {
 
   bool get isAccepted => status == 'ACCEPTED';
   bool get isPending => status == 'PENDING';
+  bool get isDeclined => status == 'DECLINED';
 
   String otherId(String me) => senderId == me ? receiverId : senderId;
   Profile? other(String me) => senderId == me ? receiver : sender;

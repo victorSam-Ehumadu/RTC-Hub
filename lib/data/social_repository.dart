@@ -46,10 +46,28 @@ class ConnectionRepository {
     return rows.isEmpty ? null : Connection.fromMap(rows.first);
   }
 
-  Future<void> request(String targetId) => db.from('connections').insert({
-        'sender_id': requireUserId,
-        'receiver_id': targetId,
-      });
+  /// Sends a connection request, or — if the last one between these two was
+  /// declined and this user was the original sender — resends it by moving
+  /// that row back to PENDING instead. A fresh INSERT would 23505 against
+  /// UNIQUE(sender_id, receiver_id) while the DECLINED row still occupies
+  /// that pair, and only the sender may resend (see migration 0015's
+  /// conn_resend policy) — the receiver has no such path, matching how a
+  /// decline is meant to be final from their side.
+  Future<void> request(String targetId) async {
+    final me = requireUserId;
+    final existing = await between(targetId);
+    if (existing != null && existing.isDeclined && existing.senderId == me) {
+      await db.from('connections').update({
+        'status': 'PENDING',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', existing.id);
+      return;
+    }
+    await db.from('connections').insert({
+      'sender_id': me,
+      'receiver_id': targetId,
+    });
+  }
 
   Future<void> respond(String connectionId, {required bool accept}) =>
       db.from('connections').update({

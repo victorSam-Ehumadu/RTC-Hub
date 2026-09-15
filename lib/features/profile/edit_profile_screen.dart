@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
@@ -26,10 +27,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _industry = TextEditingController();
   final _location = TextEditingController();
   final _portfolio = TextEditingController();
+  final _linkedinUrl = TextEditingController();
+  final _credlyUrl = TextEditingController();
 
   String? _faculty;
   String? _course;
   String? _year;
+  String? _campus;
+  int? _enrollmentYear;
+  int? _graduationYear;
   String? _avatarUrl;
   bool _visibleToBusiness = true;
   bool _visibleToPeers = true;
@@ -47,6 +53,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _industry.dispose();
     _location.dispose();
     _portfolio.dispose();
+    _linkedinUrl.dispose();
+    _credlyUrl.dispose();
     super.dispose();
   }
 
@@ -57,12 +65,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       imageQuality: 85,
     );
     if (picked == null) return;
+    if (!mounted) return;
+
+    // Crop the image to a square
+    final primary = Theme.of(context).colorScheme.primary;
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Profile Picture',
+          toolbarColor: primary,
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Crop Profile Picture',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+
+    if (cropped == null) return;
+    if (!mounted) return;
 
     setState(() => _uploading = true);
     try {
       final url = await ref
           .read(storageRepoProvider)
-          .upload(File(picked.path), bucket: StorageRepository.avatars);
+          .upload(File(cropped.path), bucket: StorageRepository.avatars);
       setState(() => _avatarUrl = url);
     } catch (error) {
       if (mounted) showError(context, error);
@@ -86,11 +119,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               faculty: _faculty,
               course: _course,
               academicYear: _year,
+              campus: _campus,
+              enrollmentYear: _enrollmentYear,
+              graduationYear: _graduationYear,
               companyName: _company.text.trim(),
               industry: _industry.text.trim(),
               companyLocation: _location.text.trim(),
               portfolioUrl:
                   _portfolio.text.trim().isEmpty ? null : _portfolio.text.trim(),
+              linkedinUrl: _linkedinUrl.text.trim().isEmpty ? null : _linkedinUrl.text.trim(),
+              credlyUrl: _credlyUrl.text.trim().isEmpty ? null : _credlyUrl.text.trim(),
               visibilityBusiness: _visibleToBusiness,
               visibilityPeers: _visibleToPeers,
             ),
@@ -121,6 +159,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _industry.text = me.industry ?? '';
       _location.text = me.companyLocation ?? '';
       _portfolio.text = me.portfolioUrl ?? '';
+      _linkedinUrl.text = me.linkedinUrl ?? '';
+      _credlyUrl.text = me.credlyUrl ?? '';
       // Guard against stored values that no longer exist in kFaculties /
       // kAcademicYears (e.g. data from before a constants.dart edit, or a
       // profile written outside the app) — DropdownButtonFormField asserts
@@ -130,6 +170,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _course =
           coursesForFaculty(_faculty).contains(me.course) ? me.course : null;
       _year = kAcademicYears.contains(me.academicYear) ? me.academicYear : null;
+      _campus = kCampuses.contains(me.campus) ? me.campus : null;
+      _enrollmentYear = kYearOptions(after: 0).contains(me.enrollmentYear)
+          ? me.enrollmentYear
+          : null;
+      _graduationYear =
+          kYearOptions().contains(me.graduationYear) ? me.graduationYear : null;
       _avatarUrl = me.avatarUrl;
       _visibleToBusiness = me.visibilityBusiness;
       _visibleToPeers = me.visibilityPeers;
@@ -208,17 +254,38 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             minLines: 2,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              labelText: 'Student Involvement',
+              labelText: 'Involvement',
               hintText: 'Club activities, volunteer work, competitions, community involvement.',
             ),
           ),
           const SizedBox(height: 14),
+          const SectionHeader(title: 'Portfolio & Links'),
           TextField(
             controller: _portfolio,
             keyboardType: TextInputType.url,
             decoration: const InputDecoration(
               labelText: 'Portfolio / GitHub URL',
               prefixIcon: Icon(Icons.link, size: 20),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _linkedinUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'LinkedIn Profile',
+              prefixIcon: Icon(Icons.work_outline, size: 20),
+              hintText: 'https://linkedin.com/in/yourprofile',
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _credlyUrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Credly Badge Collection',
+              prefixIcon: Icon(Icons.verified_user_outlined, size: 20),
+              hintText: 'https://www.credly.com/users/yourprofile',
             ),
           ),
 
@@ -261,6 +328,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   DropdownMenuItem(value: y, child: Text(y)),
               ],
               onChanged: (v) => setState(() => _year = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: _campus,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Campus'),
+              items: [
+                for (final c in kCampuses)
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: (v) => setState(() => _campus = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _enrollmentYear,
+              isExpanded: true,
+              decoration:
+                  const InputDecoration(labelText: 'Year of enrollment'),
+              items: [
+                for (final y in kYearOptions(after: 0))
+                  DropdownMenuItem(value: y, child: Text('$y')),
+              ],
+              onChanged: (v) => setState(() => _enrollmentYear = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<int>(
+              initialValue: _graduationYear,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Year of graduation (actual or expected)',
+              ),
+              items: [
+                for (final y in kYearOptions())
+                  DropdownMenuItem(value: y, child: Text('$y')),
+              ],
+              onChanged: (v) => setState(() => _graduationYear = v),
             ),
           ],
 

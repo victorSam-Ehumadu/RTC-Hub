@@ -18,8 +18,8 @@ String describeError(Object error) {
     // Signup runs handle_new_user(); a raise in there arrives as a generic
     // "Database error saving new user", so surface the likely cause.
     if (msg.contains('Database error saving new user')) {
-      return 'Signup was rejected. Students must use a @richfield.ac.za '
-          'address with a 9-digit student number.';
+      return 'Signup was rejected. Students must use a Richfield or AAA '
+          'student address with a 9-digit student number.';
     }
     return msg;
   }

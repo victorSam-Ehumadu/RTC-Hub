@@ -23,6 +23,7 @@ class Post {
     this.bountyPoints = 0,
     this.bountySolved = false,
     this.bountyModule,
+    this.attachmentUrls = const [],
     this.reactionCount = 0,
     this.commentCount = 0,
     this.myReaction,
@@ -43,6 +44,7 @@ class Post {
   final int bountyPoints;
   final bool bountySolved;
   final String? bountyModule;
+  final List<String> attachmentUrls;
   final int reactionCount;
   final int commentCount;
 
@@ -72,6 +74,9 @@ class Post {
         bountyPoints: (map['bounty_points'] as int?) ?? 0,
         bountySolved: (map['bounty_solved'] as bool?) ?? false,
         bountyModule: map['bounty_module'] as String?,
+        attachmentUrls: map['attachment_urls'] is List
+            ? List<String>.from(map['attachment_urls'] as List)
+            : [],
         reactionCount: embeddedCount(map['post_reactions']),
         commentCount: embeddedCount(map['comments']),
       );
@@ -99,6 +104,7 @@ class Post {
         bountyPoints: bountyPoints,
         bountySolved: bountySolved ?? this.bountySolved,
         bountyModule: bountyModule,
+        attachmentUrls: attachmentUrls,
         reactionCount: reactionCount ?? this.reactionCount,
         commentCount: commentCount ?? this.commentCount,
         myReaction: clearMyReaction ? null : (myReaction ?? this.myReaction),

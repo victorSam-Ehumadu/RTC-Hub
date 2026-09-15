@@ -759,6 +759,8 @@ class DemoAuthRepository extends AuthRepository {
     String? course,
     String? academicYear,
     int? graduationYear,
+    String? campus,
+    int? enrollmentYear,
     String? studentNumber,
     String? companyName,
     String? industry,
@@ -769,6 +771,12 @@ class DemoAuthRepository extends AuthRepository {
 
   @override
   Future<void> sendPasswordReset(String email) async {}
+
+  @override
+  Future<void> updateOwnPassword(String newPassword) async {}
+
+  @override
+  Future<void> deleteOwnAccount() async {}
 }
 
 class DemoPostRepository extends PostRepository {
@@ -808,6 +816,7 @@ class DemoPostRepository extends PostRepository {
     String? thumbnailUrl,
     bool isBounty = false,
     String? bountyModule,
+    List<String>? attachmentUrls,
   }) async {
     final post = Post(
       id: 'p-${DateTime.now().millisecondsSinceEpoch}',
@@ -824,6 +833,7 @@ class DemoPostRepository extends PostRepository {
       // 10 is what trg_posts_guard would set.
       bountyPoints: isBounty ? 10 : 0,
       bountyModule: bountyModule,
+      attachmentUrls: attachmentUrls ?? [],
     );
     demoPosts.insert(0, post);
     _ping();
@@ -1398,8 +1408,14 @@ final demoOverrides = <Override>[
     yield demoThread(otherId);
     yield* _bus.stream.map((_) => demoThread(otherId));
   }),
-  unreadCountProvider.overrideWith((ref) async* {
-    yield _unreadNotifications();
-    yield* _bus.stream.map((_) => _unreadNotifications());
+  // notificationsProvider otherwise falls through to the real
+  // NotificationRepository.subscribe(), which touches an uninitialised
+  // Supabase client under DEMO=true. Override it the same way threadProvider
+  // is above: seed from the demo data, then re-emit on every _ping() (the
+  // same signal DemoNotificationRepository's mark-read/remove already use).
+  // unreadCountProvider derives from this and needs no override of its own.
+  notificationsProvider.overrideWith((ref) async* {
+    yield List.of(demoNotifications);
+    yield* _bus.stream.map((_) => List.of(demoNotifications));
   }),
 ];

@@ -8,6 +8,7 @@ import '../../models/social.dart';
 import '../../providers.dart';
 import '../../widgets/common.dart';
 import '../shell/app_shell.dart';
+import '../shell/settings_drawer.dart';
 
 class ConversationsScreen extends ConsumerWidget {
   const ConversationsScreen({super.key});
@@ -18,6 +19,7 @@ class ConversationsScreen extends ConsumerWidget {
     final requests = ref.watch(connectionRequestsProvider);
 
     return Scaffold(
+      drawer: const HubDrawer(),
       appBar: const HubAppBar(title: 'Messages'),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _startChat(context, ref),

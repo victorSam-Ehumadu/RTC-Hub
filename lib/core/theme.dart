@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// The "terminal" look the project has always aimed at: near-black surfaces,
-/// a signal-green accent, and a monospace face reserved for code and point
-/// totals so technical content reads differently from prose.
+/// Richfield institutional blue as the primary accent, and a monospace face
+/// reserved for code and point totals so technical content reads differently from prose.
 class AppColors {
   const AppColors._();
 
-  static const accent = Color(0xFF22C55E);
-  static const accentDim = Color(0xFF15803D);
+  static const accent = Color(0xFF1565C0);       // Richfield institutional blue
+  static const accentDim = Color(0xFF0D47A1);    // Darker variant for hover
+  static const success = Color(0xFF22C55E);      // Success signal (old green)
+  static const successDim = Color(0xFF15803D);   // Success hover variant
   static const points = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
   static const button = Color(0xFF0C499D);
@@ -52,15 +54,17 @@ ThemeData _build({required bool dark}) {
   final border = dark ? AppColors.darkBorder : AppColors.lightBorder;
   final text = dark ? AppColors.darkText : AppColors.lightText;
   final muted = dark ? AppColors.darkMuted : AppColors.lightMuted;
+  final onPrimary = dark ? Colors.white : Colors.black;
+  final onError = dark ? Colors.white : Colors.black;
 
   final scheme = ColorScheme(
     brightness: dark ? Brightness.dark : Brightness.light,
     primary: AppColors.accent,
-    onPrimary: const Color(0xFF04120A),
+    onPrimary: onPrimary,
     secondary: AppColors.points,
     onSecondary: const Color(0xFF1A1204),
     error: AppColors.danger,
-    onError: Colors.white,
+    onError: onError,
     surface: surface,
     onSurface: text,
     outline: border,
@@ -124,7 +128,7 @@ ThemeData _build({required bool dark}) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.button,
-        foregroundColor: Colors.white,
+        foregroundColor: onPrimary,
         minimumSize: const Size.fromHeight(50),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -150,12 +154,12 @@ ThemeData _build({required bool dark}) {
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: AppColors.button,
-        selectedForegroundColor: Colors.white,
+        selectedForegroundColor: onPrimary,
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: AppColors.button,
-      foregroundColor: Colors.white,
+      foregroundColor: onPrimary,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: AppColors.button,
@@ -163,11 +167,15 @@ ThemeData _build({required bool dark}) {
     chipTheme: ChipThemeData(
       backgroundColor: surface,
       side: BorderSide(color: border),
-      labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+      labelStyle: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.accent,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: surface,
+      backgroundColor: Colors.white,
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       // Flutter's own default for the selected icon/label is

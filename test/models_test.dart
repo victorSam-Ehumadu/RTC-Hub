@@ -13,6 +13,11 @@ void main() {
       expect(isValidStudentEmail('  202512345@MY.RICHFIELD.AC.ZA '), isTrue);
     });
 
+    test('accepts a 9-digit AAA partner-campus address', () {
+      expect(isValidStudentEmail('202512345@my.aaa.ac.za'), isTrue);
+      expect(isValidStudentEmail('202512345@aaa.ac.za'), isTrue);
+    });
+
     test('rejects a non-Richfield domain', () {
       expect(isValidStudentEmail('202512345@gmail.com'), isFalse);
     });
@@ -21,6 +26,20 @@ void main() {
       expect(isValidStudentEmail('2025123@my.richfield.ac.za'), isFalse);
       expect(isValidStudentEmail('2025123456@my.richfield.ac.za'), isFalse);
       expect(isValidStudentEmail('jsmith@my.richfield.ac.za'), isFalse);
+    });
+  });
+
+  group('password policy', () {
+    test('accepts a password meeting every requirement', () {
+      expect(passwordPolicyError('Str0ng!Pass'), isNull);
+    });
+
+    test('rejects one missing requirement at a time', () {
+      expect(passwordPolicyError('Sh0rt!'), isNotNull); // too short
+      expect(passwordPolicyError('nouppercase1!'), isNotNull);
+      expect(passwordPolicyError('NOLOWERCASE1!'), isNotNull);
+      expect(passwordPolicyError('NoDigitsHere!'), isNotNull);
+      expect(passwordPolicyError('NoSpecialChar123'), isNotNull);
     });
   });
 

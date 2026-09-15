@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/supabase.dart';
@@ -123,6 +125,16 @@ final experienceProvider = FutureProvider.autoDispose
   return ref.watch(profileRepoProvider).experience(userId);
 });
 
+final recommendationsProvider = FutureProvider.autoDispose
+    .family<List<Recommendation>, String>((ref, userId) {
+  return ref.watch(profileRepoProvider).recommendations(userId);
+});
+
+final pendingRecommendationsProvider =
+    FutureProvider.autoDispose<List<Recommendation>>((ref) {
+  return ref.watch(profileRepoProvider).pendingRecommendations();
+});
+
 final logicPointsProvider =
     FutureProvider.autoDispose.family<int, String>((ref, userId) {
   return ref.watch(profileRepoProvider).logicPoints(userId);
@@ -189,31 +201,36 @@ final threadProvider = StreamProvider.autoDispose
 
 // ─── Notifications ────────────────────────────────────────────
 
-final notificationsProvider =
-    FutureProvider.autoDispose<List<AppNotification>>((ref) {
-  return ref.watch(notificationRepoProvider).list();
-});
-
-/// Unread badge count, kept live so a notification arriving mid-session bumps
-/// the bell without a manual refresh.
+/// The notification list, live: seeds from a query and then prepends
+/// realtime inserts, mirroring [threadProvider]'s seed-then-append pattern.
 ///
-/// Watches [authStateProvider] so it re-runs on sign-in — without that it would
-/// evaluate once at launch while the session is still null and stay at zero for
-/// the rest of the run.
-final unreadCountProvider = StreamProvider<int>((ref) async* {
+/// Previously a one-shot [FutureProvider] — the badge count updated live
+/// (see [unreadCountProvider] below) but the actual list only refreshed on a
+/// manual pull-to-refresh or screen re-entry, because nothing ever appended
+/// the realtime payload to it.
+///
+/// Watches [authStateProvider] for the same reason [unreadCountProvider]
+/// does: without it, this would evaluate once at launch while the session is
+/// still null and never re-run on sign-in.
+final notificationsProvider =
+    StreamProvider.autoDispose<List<AppNotification>>((ref) async* {
   ref.watch(authStateProvider);
 
   if (db.auth.currentSession == null) {
-    yield 0;
+    yield [];
     return;
   }
   final repo = ref.watch(notificationRepoProvider);
 
-  var count = await repo.unreadCount();
-  yield count;
+  final list = await repo.list();
+  yield list;
 
-  final controller = StreamController<int>();
-  final channel = repo.subscribe((_) => controller.add(++count));
+  final controller = StreamController<List<AppNotification>>();
+  final channel = repo.subscribe((n) {
+    if (list.any((x) => x.id == n.id)) return;
+    list.insert(0, n); // newest first
+    controller.add(List.of(list));
+  });
 
   ref.onDispose(() {
     db.removeChannel(channel);
@@ -221,6 +238,13 @@ final unreadCountProvider = StreamProvider<int>((ref) async* {
   });
 
   yield* controller.stream;
+});
+
+/// Unread badge count, derived from [notificationsProvider] so there's a
+/// single realtime channel behind both rather than two independent ones.
+final unreadCountProvider = Provider.autoDispose<int>((ref) {
+  final list = ref.watch(notificationsProvider).valueOrNull;
+  return list?.where((n) => !n.read).length ?? 0;
 });
 
 // ─── Opportunities and events ─────────────────────────────────
@@ -301,3 +325,34 @@ final businessStatsProvider =
     FutureProvider.autoDispose.family<BusinessStats, String>((ref, userId) {
   return ref.watch(analyticsRepoProvider).forBusiness(userId);
 });
+
+// ─── Theme ────────────────────────────────────────────────────
+
+const _themeModePrefKey = 'theme_mode';
+
+/// The user's light/dark preference from the settings drawer, persisted
+/// across restarts. Defaults to dark — "the terminal look" main.dart used to
+/// hardcode — until [ThemeModeController._restore] loads a saved choice.
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>(
+        (_) => ThemeModeController());
+
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController() : super(ThemeMode.dark) {
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_themeModePrefKey);
+    if (saved != null && mounted) {
+      state = ThemeMode.values.byName(saved);
+    }
+  }
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModePrefKey, mode.name);
+  }
+}
