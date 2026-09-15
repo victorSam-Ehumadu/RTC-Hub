@@ -331,30 +331,30 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               const SizedBox(height: 8),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _attachedFiles.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 4),
-                itemBuilder: (context, index) {
+              ...List.generate(
+                _attachedFiles.length,
+                (index) {
                   final fileName = _attachedFiles[index].path.split('/').last;
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.attach_file, size: 20),
-                      title: Text(
-                        fileName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.close, size: 16),
-                        onPressed: () =>
-                            setState(() => _attachedFiles.removeAt(index)),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index < _attachedFiles.length - 1 ? 4 : 0),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.attach_file, size: 20),
+                        title: Text(
+                          fileName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () =>
+                              setState(() => _attachedFiles.removeAt(index)),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
                       ),
                     ),
                   );
