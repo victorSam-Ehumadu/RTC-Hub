@@ -44,7 +44,7 @@ class RtcHubApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Richfield Community',
+      title: 'enRICHment',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
@@ -61,7 +61,7 @@ class _SetupNeededApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Richfield Community',
+      title: 'enRICHment',
       debugShowCheckedModeBanner: false,
       theme: buildDarkTheme(),
       home: Scaffold(

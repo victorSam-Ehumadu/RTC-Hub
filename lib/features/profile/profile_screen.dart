@@ -48,6 +48,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         flexibleSpace: const HubBanner(),
         iconTheme: const IconThemeData(color: hubBannerForeground),
         actionsIconTheme: const IconThemeData(color: hubBannerForeground),
+        // Only the self view is a bottom-nav root with no back arrow to
+        // lose — someone else's profile (`/user/:id`) is pushed, so it
+        // needs `leading` left alone for the real back button.
+        leading: isSelf
+            ? Padding(
+                padding: const EdgeInsets.all(10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+                ),
+              )
+            : null,
         title: Text(
           isSelf ? 'Your profile' : 'Profile',
           style: const TextStyle(

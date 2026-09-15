@@ -450,6 +450,16 @@ class HubAppBar extends ConsumerWidget implements PreferredSizeWidget {
       iconTheme: onBanner == null ? null : IconThemeData(color: onBanner),
       actionsIconTheme:
           onBanner == null ? null : IconThemeData(color: onBanner),
+      // Safe in the true `leading` slot specifically because these are
+      // bottom-nav root tabs — never pushed, so there's never a back arrow
+      // here to lose.
+      leading: Padding(
+        padding: const EdgeInsets.all(10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+        ),
+      ),
       title: Text(
         title,
         style: onBanner == null

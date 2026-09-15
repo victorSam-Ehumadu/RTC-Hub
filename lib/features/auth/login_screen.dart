@@ -156,13 +156,13 @@ class _Wordmark extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: Image.asset(
-            'assets/images/Richfield-Logo-square.jpg',
+            'assets/images/logo.png',
             fit: BoxFit.cover,
           ),
         ),
         const SizedBox(height: 18),
         Text(
-          'Richfield Community',
+          'enRICHment',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
