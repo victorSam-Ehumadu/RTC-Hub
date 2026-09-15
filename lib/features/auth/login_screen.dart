@@ -162,7 +162,7 @@ class _Wordmark extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'enRICHment',
+          'EnRICHment',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,

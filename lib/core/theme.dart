@@ -153,8 +153,11 @@ ThemeData _build({required bool dark}) {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
+        // AppColors.button is a fixed dark blue in both themes, so the
+        // selected label must stay white rather than following onPrimary
+        // (which flips to black in light mode and vanishes on that background).
         selectedBackgroundColor: AppColors.button,
-        selectedForegroundColor: onPrimary,
+        selectedForegroundColor: Colors.white,
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -175,7 +178,7 @@ ThemeData _build({required bool dark}) {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: surface,
       indicatorColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       // Flutter's own default for the selected icon/label is

@@ -44,7 +44,7 @@ class RtcHubApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'enRICHment',
+      title: 'EnRICHment',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
@@ -61,7 +61,7 @@ class _SetupNeededApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'enRICHment',
+      title: 'EnRICHment',
       debugShowCheckedModeBanner: false,
       theme: buildDarkTheme(),
       home: Scaffold(
