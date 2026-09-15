@@ -1,5 +1,5 @@
 -- ============================================================
--- RTC Hub — 0019: revert faculty segregation on posts/opportunities/events
+-- RTC Hub — 0021: revert faculty segregation on posts/opportunities/events
 --
 -- `origin/fix/backend-access` (unmerged, its own `0007_faculty_segregation.sql`
 -- — numbering from a different snapshot of this repo, unrelated to our own
@@ -32,7 +32,11 @@
 -- to bring the feature back properly once it's actually merged and the app
 -- code (this branch's PostRepository included) is updated to match it.
 --
--- Run after 0018_profile_campus_enrollment.sql.
+-- Numbered 0021, not 0019: 0019_delete_own_account.sql already claimed 0019 on
+-- this branch, and 0020_restore_alumni_auto_verify.sql (a parallel Claude Code
+-- session's fix, already run against the shared project) claimed 0020.
+--
+-- Run after 0020_restore_alumni_auto_verify.sql.
 -- ============================================================
 
 -- Posts: back to "not flagged, or yours, or you're an admin" — no faculty term.
